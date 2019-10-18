@@ -1,7 +1,6 @@
 package ARP;
 
-
-
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -12,6 +11,10 @@ public class EthernetLayer implements BaseLayer {
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
+	private final static byte[] enetType_CHAT = byte4To2(intToByte(0x2080));// 안 바뀔 필드라서 final로 넣었습니다.
+	private final static byte[] enetType_FILE = byte4To2(intToByte(0x2090));
+	private final static byte[] enetType_ARP = byte4To2(intToByte(0x0806));
+	private final static byte[] enetType_IP = byte4To2(intToByte(0x0800));
 
 	private class _ETHERNET_ADDR {
 		private byte[] addr = new byte[6];
@@ -111,36 +114,25 @@ public class EthernetLayer implements BaseLayer {
 		return buf;
 	}
 
-	public boolean Send(byte[] input, int length) {
-		byte[] bytes = ObjToByte(m_sHeader, input, length);
-		/*
-		System.out.println("input length(ethernet) : " + input.length);
-		System.out.println("seding bytes length(ethernet) : " + bytes.length);
-		*/
-		this.GetUnderLayer().Send(bytes, length + 14);
-
-		return false;
-	}
-
 	public byte[] RemoveEtherHeader(byte[] input, int length) {
 		byte[] data = new byte[length - 14];
 		for (int i = 0; i < length - 14; i++)
 			data[i] = input[14 + i];
 		return data;
 	}
-	
-	public boolean IsItARP(byte[] input) {//ARP 과제 추가 메서드
-		//ARP layer에서 ARP messege(frame type 0x0806)를 수신하게 되면 true를 반환할 예정
+
+	public boolean Send(byte[] input, int length) {
+		byte[] bytes = ObjToByte(m_sHeader, input, length);
+
+		this.GetUnderLayer().Send(bytes, length + 14);
 		return false;
 	}
-	
-	public byte[] generateARP() {//ARP 과제 추가 메서드 2
-		//IsItARP가 TRUE이면 ARP PROTOCOL에 맞는 자료구조를 생성해 내려보낼 예정
-		return null;
-	}
-	
-	public byte[] getPortNumber() {//ARP 과제 추가 메서드 2
-		return null;//생성될 ARP 테이블을 검색하여 포트 넘버를 제공함
+
+	// ARP 과제 추가 메서드 sendARP는 필요 없을 것 같아서 삭제했습니다.
+	// ARP 헤더는 ARP layer에서 만드는 거니까 broadcasting 만 해 주면 될 것 같습니다.
+
+	public byte[] getPortNumber() {// ARP 과제 추가 메서드 2
+		return null;// 생성될 ARP 테이블을 검색하여 포트 넘버를 제공함
 	}
 
 	public boolean IsItMyPacket(byte[] input) {
@@ -174,49 +166,58 @@ public class EthernetLayer implements BaseLayer {
 		return true;
 	}
 
+	public boolean IsItARP(byte[] input) {// ARP protocol 판별
+		byte[] enet_type = { input[12], input[13] };
+
+		if (Arrays.equals(enet_type, enetType_ARP)) {
+			return true;
+		} else
+			return false;
+	}
+
+	public boolean IsItIP(byte[] input) {// IP Protocol 판별
+		byte[] enet_type = { input[12], input[13] };
+
+		if (Arrays.equals(enet_type, enetType_IP)) {
+			return true;
+		} else
+			return false;
+	}
+
 	public boolean Receive(byte[] input) {
 		byte[] data;
-		byte[] enet_type = {input[12], input[13]};
-		byte[] chatEnetType = byte4To2(intToByte(0x2080));
-		byte[] fileEnetType = byte4To2(intToByte(0x2090));
 		boolean MyPacket, Mine, Broadcast;
 		MyPacket = IsItMyPacket(input);
 
-		if (MyPacket == true){
-			//내가 만든 패킷이면 수신하지 않음.
+		if (MyPacket == true) {
+			// 내가 만든 패킷이면 수신하지 않음.
 			return false;
-		}else {
+		} else {
 			Broadcast = IsItBroadcast(input);
 			if (Broadcast == false) {
-				//브로드 캐스팅도 아니면서, 
+				// 브로드 캐스팅도 아니면서,
 				Mine = IsItMine(input);
-				if (Mine == false){
+				if (Mine == false) {
 					// 목적지가 자신이 아니면 수신하지 않음.
 					return false;
 				}
 			}
 		}
-		/* ARP 과제 추가 사항
-		 * if(type =ARP 이고 수신자가 나이면) { 
-		 * 	 then ARP laayer로 올려보냄
-		 * }
-		 */
-		
-		if(Arrays.equals(enet_type, chatEnetType)) {
-			data = RemoveEtherHeader(input, input.length);
-			this.GetUpperLayer(1).Receive(data);
-			return true;
-			
-		} else if(Arrays.equals(enet_type, fileEnetType)) {
-			data = RemoveEtherHeader(input, input.length);
-			this.GetUpperLayer(0).Receive(data);
-			return true;
-			
+
+		// ARP 과제 추가 사항:
+		if (IsItARP(input)) {// ARP이고
+			Mine = IsItMine(input);
+			if (Mine == true) {// 수신자가 나이면
+				data = RemoveEtherHeader(input, input.length);
+				this.GetUpperLayer(0).Receive(data);// receive하고 ARP layer로 올려보냄 . upperlayer(0)이 맞나요?
+				return true;
+			} else
+				return false;
 		} else
 			return false;
 	}
-	
-	byte[] intToByte(int value) {
+
+	public static byte[] intToByte(int value) {
 		byte[] byteArray = new byte[4];
 		byteArray[0] = (byte) (value >> 24);
 		byteArray[1] = (byte) (value >> 16);
@@ -224,8 +225,8 @@ public class EthernetLayer implements BaseLayer {
 		byteArray[3] = (byte) (value);
 		return byteArray;
 	}
-	
-	byte[] byte4To2(byte[] fourByte) {
+
+	public static byte[] byte4To2(byte[] fourByte) {
 		byte[] byteArray = new byte[2];
 		byteArray[0] = fourByte[2];
 		byteArray[1] = fourByte[3];
@@ -278,4 +279,3 @@ public class EthernetLayer implements BaseLayer {
 
 	}
 }
-
