@@ -273,7 +273,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 						Thread cacheUpdate = new Thread(task);
 						cacheUpdate.start();
 					 
-					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send();							// Send 시작
+					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send(null,0);							// Send 시작
 				} else {
 					System.out.println("올바른 IP주소를 입력하시오");
 				}
