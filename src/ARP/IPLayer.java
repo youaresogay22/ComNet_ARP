@@ -90,10 +90,9 @@ public class IPLayer implements BaseLayer {
 		//Debug
 		for(int i=0; i<buf.length; i++) 
 			System.out.print(buf[i]+ " ");
-		System.out.println("\nlength = "+buf.length);
-		System.out.println("IP Send");
+		System.out.println();
 		
-		this.GetUnderLayer().Send(buf, buf.length);
+		this.GetUnderLayer().Send(buf, buf.length);				// Send
 		return false;
 	}
 

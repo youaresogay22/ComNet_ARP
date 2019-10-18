@@ -70,10 +70,9 @@ public class TCPLayer implements BaseLayer {
 		// Debug
 		for(int i=0; i<buf.length; i++) 
 			System.out.print(buf[i]+ " ");
-		System.out.println("\nlength = "+buf.length);
-		System.out.println("TCP Send");
+		System.out.println();
 		
-		this.GetUnderLayer().Send(buf, buf.length);
+		this.GetUnderLayer().Send(buf, buf.length);				// Send
 		return false;
 	}
 
@@ -134,4 +133,5 @@ public class TCPLayer implements BaseLayer {
 		pUULayer.SetUnderLayer(this);
 
 	}
+	
 }

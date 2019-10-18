@@ -5,10 +5,13 @@ import java.awt.Color;
 import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -25,6 +28,8 @@ import javax.swing.UIManager;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
+
+import ARP.ARPLayer._Cache_Entry;
 
 
 /*
@@ -45,6 +50,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	BaseLayer UnderLayer;
 
 	private static LayerManager m_LayerMgr = new LayerManager();
+	
 
 	private JTextField TextWrite;	//좌측 "IP주소"
 	private JTextField TextWrite2;	//우측 "H/W주소"
@@ -95,6 +101,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.AddLayer(new ARPDlg("GUI"));
 
 		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) )" );
+				
 		}
 	
 	public ARPDlg(String pName) {
@@ -247,11 +254,24 @@ public class ARPDlg extends JFrame implements BaseLayer {
 			}
 			if(e.getSource() == ARP_Send_Button) {			//ARP Send
 				if (isValidIPv4Addr(TextWrite.getText())) {	//올바른 IP주소 형식이 입력되었다면,
-					// 아래의 형식으로 JList에 추가하여 GUI에 display
-					//ARPModel.addElement(String.format("%20s%20s%15s", TextWrite.getText(), "??????????????", "incomplete"));
-					
 					 ((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText());	//IPLayer의 dst 주소 설정
 					 																		//IPLayer의 src 주소 설정
+					 
+					 //2초 마다 printCash()를 호출하여 캐시 테이블을 갱신하는 기능.
+					 Runnable task = () ->{
+							while(true) {
+								try {
+									Thread.sleep(2000);
+								} catch (InterruptedException e1) {
+									// TODO Auto-generated catch block
+									e1.printStackTrace();
+								}
+								printCash();
+							}
+						};
+						// 위 기능을 수행하는 쓰레드 생성 및 시작.
+						Thread cacheUpdate = new Thread(task);
+						cacheUpdate.start();
 					 
 					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send();							// Send 시작
 				} else {
@@ -291,6 +311,21 @@ public class ARPDlg extends JFrame implements BaseLayer {
 				System.out.println("Cancle Button Clicked");
 			}
 		}
+	}
+	
+	//ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수
+	public synchronized void printCash() {
+		//ARPLayer에서 만든 cache_Table을 가져온다.
+		 Map<String, _Cache_Entry> cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
+		 Set<String> cache_Itr = cache_Table.keySet(); 
+		
+		 for(String key : cache_Itr) {
+			 //중복인 경우 아무것도 하지 않고, 중복이 아닐 경우 GUI에 추가한다.
+			 if(ARPModel.contains(String.format("%20s%20s%15s", key , "??????????????", "incomplete"))) {
+			 }else {
+				 ARPModel.addElement(String.format("%20s%20s%15s", key , "??????????????", "incomplete")); 
+			 }
+		 }
 	}
 	
 	// 팝업창 GUI
@@ -359,6 +394,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		Proxy_Cancle_Button.addActionListener(new setAddressListener());
 		contentPane2.add(Proxy_Cancle_Button);// chatting send button
 	}
+	
 	
 	// 유효한 IP 형식인지 체크. 속도 저하의 주범
 	public boolean isValidIPv4Addr(String ip) {
