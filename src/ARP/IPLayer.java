@@ -1,6 +1,7 @@
 package ARP;
 
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 
 public class IPLayer implements BaseLayer {
@@ -20,7 +21,7 @@ public class IPLayer implements BaseLayer {
 		}
 	}
 
-	private class _IP_HEADER {
+	private class _IP_HEADER {	// 20byte
 		byte ip_verlen;		//ip version -> IPv4 : 4	(O, 1byte)
 		byte ip_tos;		//type of service			(X, 1byte)
 		byte[] ip_len;		//total packet length		(△,  2byte)
@@ -44,11 +45,25 @@ public class IPLayer implements BaseLayer {
 			this.ip_cksum = new byte[2];
 			this.ip_src = new _IP_ADDR();
 			this.ip_dst = new _IP_ADDR();
-			this.ip_data = null;	// new
+			this.ip_data = null;
 		}
 	}
 
 	_IP_HEADER m_iHeader = new _IP_HEADER(); 
+	
+	public void setSrcAddr(String ip) {
+		StringTokenizer st = new StringTokenizer(ip, ".");
+		
+		for(int i = 0; i < 4; i++) {
+			m_iHeader.ip_src.addr[i] = (byte)Integer.parseInt(st.nextToken());
+		}
+	}
+	public void setDstAddr(String ip) {
+		StringTokenizer st = new StringTokenizer(ip, ".");
+		
+		for(int i = 0; i < 4; i++)
+			m_iHeader.ip_src.addr[i] = (byte)Integer.parseInt(st.nextToken());
+	}
 	
 	public IPLayer(String pName) {
 		// super(pName);
@@ -58,6 +73,27 @@ public class IPLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
+		byte[] buf = new byte[length + 20];
+		
+		buf[0] = m_iHeader.ip_verlen;							// buf에 1byte verlen 초기화
+		buf[1] = m_iHeader.ip_tos;								// 1byte tos
+		System.arraycopy(m_iHeader.ip_len, 0, buf, 2, 2); 		// 2byte len
+		System.arraycopy(m_iHeader.ip_id, 0, buf, 4, 2); 		// 2byte id
+		System.arraycopy(m_iHeader.ip_fragoff, 0, buf, 6, 2); 	// 2byte fragoff
+		buf[8] = m_iHeader.ip_ttl;								// 1byte ttl
+		buf[9] = m_iHeader.ip_proto;							// 1byte proto
+		System.arraycopy(m_iHeader.ip_cksum, 0, buf, 10, 2);	// 2byte cksum
+		System.arraycopy(m_iHeader.ip_src.addr, 0, buf, 12, 4); // 4byte src
+		System.arraycopy(m_iHeader.ip_dst.addr, 0, buf, 16, 4); // 4byte dst
+		System.arraycopy(input, 0, buf, 20, length); // IP header에 TCP header 붙이기
+		
+		//Debug
+		for(int i=0; i<buf.length; i++) 
+			System.out.print(buf[i]+ " ");
+		System.out.println("\nlength = "+buf.length);
+		System.out.println("IP Send");
+		
+		this.GetUnderLayer().Send(buf, buf.length);
 		return false;
 	}
 
