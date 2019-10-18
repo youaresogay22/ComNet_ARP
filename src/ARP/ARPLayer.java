@@ -64,12 +64,10 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public void ResetHeader() {
-
 	}
 	
 	// ARPLayer에서 만든 cache_Table을 다른 Layer에서도 사용할 수 있게끔 해주는 기능.
-	public Map<String, _Cache_Entry> getCacheList()
-	{
+	public Map<String, _Cache_Entry> getCacheList(){
 		return cache_Table;
 	}
 	

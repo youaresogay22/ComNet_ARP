@@ -8,10 +8,9 @@ import java.awt.event.ActionListener;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -32,14 +31,6 @@ import javax.swing.border.TitledBorder;
 import ARP.ARPLayer._Cache_Entry;
 
 
-/*
- * 개선점 : 
- * 1.이벤트의 에러처리가 부실함 + if문 남발
- * 2.UI를 생성하는 클래스를 따로 두면 코드가 좀 더 깔끔해질듯
- * 3.incomplete -> complete, Gratutious Send 미구현
- * 4.종료 버튼과 취소 버튼의 차이가 뭔지
- * */
-
 @SuppressWarnings("serial")
 public class ARPDlg extends JFrame implements BaseLayer {
 
@@ -50,8 +41,9 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	BaseLayer UnderLayer;
 
 	private static LayerManager m_LayerMgr = new LayerManager();
+	static Map<String, _Cache_Entry> cache_Table;
+	static Set<String> cache_Itr;
 	
-
 	private JTextField TextWrite;	//좌측 "IP주소"
 	private JTextField TextWrite2;	//우측 "H/W주소"
 	private JTextField TextWrite3;	//팝업 창 "IP주소"
@@ -66,8 +58,8 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	Container contentPane;	//메인 콘테이너
 	Container contentPane2;	//팝업 창 콘테이너
 	
-	DefaultListModel ARPModel;	//JList의 Item들을 관리하는 모델
-	DefaultListModel ProxyModel;
+	static DefaultListModel ARPModel;	//JList의 Item들을 관리하는 모델
+	static DefaultListModel ProxyModel;
 	JFrame PopUpFrame;			//프록시 add버튼 클릭 시 나타나는 팝업 창
 	
 	JList ArpArea;			// 좌측 ARP 텍스트 출력란
@@ -101,7 +93,25 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.AddLayer(new ARPDlg("GUI"));
 
 		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) )" );
-				
+		
+		 //2초 마다 printCash()를 호출하여 캐시 테이블과 GUI를 갱신하는 쓰레드
+		 Runnable task = () ->{
+				while(true) {
+					try {
+						Thread.sleep(2000);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+				// ARPLayer에서 만든 cache_Table을 가져온다. 2초마다 갱신하는 셈.
+				cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
+				cache_Itr = cache_Table.keySet();
+
+				printCash();	//GUI에 cache_Table을 print
+				}
+			};
+			// 위 기능을 수행하는 쓰레드 생성 및 시작.
+			Thread cacheUpdate = new Thread(task);
+			cacheUpdate.start();
 		}
 	
 	public ARPDlg(String pName) {
@@ -238,42 +248,31 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		setVisible(true);
 	}
 
-	///////////////// 이벤트
+	///////////////// 버튼 클릭 이벤트
 	class setAddressListener implements ActionListener {
 		@Override
-		
 		public void actionPerformed(ActionEvent e) {
-			
 			// ARP 이벤트
-			if(e.getSource() == Item_Delete_Button) {	//JList에서 하나의 목록(Item)을 클릭하고 이 버튼을 누르면, 삭제한다.
-				if(ArpArea.getSelectedValue() != null)
+			if (e.getSource() == Item_Delete_Button) { 
+				if (ArpArea.getSelectedValue() != null) {
+					// 선택한 Item의 문자열을 받아와 앞 뒤 공백을 제거한 후(trim) 가운데 공백을 구분자 삼아 토큰화 한다.
+					StringTokenizer st = new StringTokenizer(ArpArea.getSelectedValue().toString().trim(), " ");
+			
+					//cache_Table 에서 제거한 뒤 GUI에서도 제거
+					cache_Table.remove(st.nextToken());
 					ARPModel.remove(ArpArea.getSelectedIndex());
+				}
 			}
-			if(e.getSource() == All_Delete_Button) {	//JList의 모든 Item들을 삭제한다.
+			if(e.getSource() == All_Delete_Button) {	
+				//cache_Table 에서 모두 제거한 뒤 GUI에서도 제거
+				cache_Table.clear();
 				ARPModel.removeAllElements();
 			}
-			if(e.getSource() == ARP_Send_Button) {			//ARP Send
+			if(e.getSource() == ARP_Send_Button) {			
 				if (isValidIPv4Addr(TextWrite.getText())) {	//올바른 IP주소 형식이 입력되었다면,
 					 ((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText());	//IPLayer의 dst 주소 설정
 					 																		//IPLayer의 src 주소 설정
-					 
-					 //2초 마다 printCash()를 호출하여 캐시 테이블을 갱신하는 기능.
-					 Runnable task = () ->{
-							while(true) {
-								try {
-									Thread.sleep(2000);
-								} catch (InterruptedException e1) {
-									// TODO Auto-generated catch block
-									e1.printStackTrace();
-								}
-								printCash();
-							}
-						};
-						// 위 기능을 수행하는 쓰레드 생성 및 시작.
-						Thread cacheUpdate = new Thread(task);
-						cacheUpdate.start();
-					 
-					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send(null,0);							// Send 시작
+					 ((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send(null,0);							// Send 시작
 				} else {
 					System.out.println("올바른 IP주소를 입력하시오");
 				}
@@ -305,29 +304,23 @@ public class ARPDlg extends JFrame implements BaseLayer {
 			}
 			// 하단 버튼 이벤트
 			if(e.getSource() == Exit_Button) {
-				System.out.println("Exit Button Clicked");
+				dispose();
 			}
 			if(e.getSource() == Cancle_Button) {
-				System.out.println("Cancle Button Clicked");
+				dispose();
 			}
 		}
 	}
 	
 	//ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수
-	public synchronized void printCash() {
-		//ARPLayer에서 만든 cache_Table을 가져온다.
-		 Map<String, _Cache_Entry> cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
-		 Set<String> cache_Itr = cache_Table.keySet(); 
-		
-		 for(String key : cache_Itr) {
-			 //중복인 경우 아무것도 하지 않고, 중복이 아닐 경우 GUI에 추가한다.
-			 if(ARPModel.contains(String.format("%20s%20s%15s", key , "??????????????", "incomplete"))) {
-			 }else {
-				 ARPModel.addElement(String.format("%20s%20s%15s", key , "??????????????", "incomplete")); 
+		public synchronized static void printCash() {			
+			 for(String key : cache_Itr) { //캐시 테이블을 순회한다.
+				 //캐시 테이블에 있는 값이 ARPModel(GUI)에 존재하지 않으면, GUI에 추가한다.
+				 if(!(ARPModel.contains(String.format("%20s%20s%15s", key , "??????????????", "incomplete"))))
+					 ARPModel.addElement(String.format("%20s%20s%15s", key , "??????????????", "incomplete")); 
 			 }
-		 }
-	}
-	
+		}
+
 	// 팝업창 GUI
 	public void PopupDialog() {
 		PopUpFrame = new JFrame("Proxy ARP Entry 추가");
