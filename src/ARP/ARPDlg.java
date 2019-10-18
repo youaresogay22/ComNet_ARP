@@ -5,9 +5,10 @@ import java.awt.Color;
 import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -24,8 +25,6 @@ import javax.swing.UIManager;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
-import javax.swing.event.ListDataEvent;
-import javax.swing.event.ListDataListener;
 
 
 /*
@@ -246,12 +245,18 @@ public class ARPDlg extends JFrame implements BaseLayer {
 			if(e.getSource() == All_Delete_Button) {	//JList의 모든 Item들을 삭제한다.
 				ARPModel.removeAllElements();
 			}
-			if(e.getSource() == ARP_Send_Button) {			//ARP 리스트에 Item 생성
-				if(TextWrite.getText().trim().isEmpty())	//trim = 문자열 왼쪽 오른쪽의 공백을 제거해줌
-					System.out.println("IP 주소를 입력하시오");
-				else		// IP 주소를 입력하고 Send 버튼을 누르면, 아래의 형식으로 JList에 추가한다.
-					ARPModel.addElement(String.format("%20s%20s%15s", 
-							TextWrite.getText(),"??????????????","incomplete"));
+			if(e.getSource() == ARP_Send_Button) {			//ARP Send
+				if (isValidIPv4Addr(TextWrite.getText())) {	//올바른 IP주소 형식이 입력되었다면,
+					// 아래의 형식으로 JList에 추가하여 GUI에 display
+					//ARPModel.addElement(String.format("%20s%20s%15s", TextWrite.getText(), "??????????????", "incomplete"));
+					
+					 ((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText());	//IPLayer의 dst 주소 설정
+					 																		//IPLayer의 src 주소 설정
+					 
+					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send();							// Send 시작
+				} else {
+					System.out.println("올바른 IP주소를 입력하시오");
+				}
 			}
 			// Proxy 이벤트
 			if(e.getSource() == Add_Button) {	// 우측의 Add 버튼을 클릭 시, 팝업 다이얼로그
@@ -353,6 +358,17 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		Proxy_Cancle_Button.setBounds(150, 130, 100, 25);
 		Proxy_Cancle_Button.addActionListener(new setAddressListener());
 		contentPane2.add(Proxy_Cancle_Button);// chatting send button
+	}
+	
+	// 유효한 IP 형식인지 체크. 속도 저하의 주범
+	public boolean isValidIPv4Addr(String ip) {
+		try {
+			return InetAddress.getByName(ip).getHostAddress().equals(ip);
+		}
+		catch(UnknownHostException ex) {
+			return false;
+		}
+		
 	}
 
 	@Override

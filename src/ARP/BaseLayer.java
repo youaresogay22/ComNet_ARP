@@ -33,6 +33,9 @@ interface BaseLayer {
 	public default boolean Send(String filename) {
 		return false;	//filename을 매개변수로 받아서 전달해준다.
 	}
+	public default boolean Send() {
+		return false;
+	}
 
 	public default boolean Receive(byte[] input) {
 		return false;
