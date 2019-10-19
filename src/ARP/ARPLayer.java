@@ -109,7 +109,7 @@ public class ARPLayer implements BaseLayer {
 		m_aHeader.arp_protoLength = (byte) 0x00;
 	}
 
-	//Dlg에서 Send버튼을 눌렀을 때 srcAddr과 srcMAC을 받아와 아래 함수를 실행한다.
+	//Dlg에서 Send버튼을 눌렀을 때 srcAddr,srcMAC,dstAddr을 받아와 Set.
 	public void setSrcProtoAddr(byte[] srcProtoAddr) {
 		for (int i = 0; i < srcProtoAddr.length; i++) 
 			this.m_aHeader.arp_srcProtoAddr.addr[i] = srcProtoAddr[i];
@@ -122,6 +122,7 @@ public class ARPLayer implements BaseLayer {
 		for(int i=0; i< destProtoAddr.length; i++)
 			this.m_aHeader.arp_destProtoAddr.addr[i] = destProtoAddr[i];
 	}
+	
 	public void setOPCode(byte i) {
 		this.m_aHeader.arp_op[0] = i;
 	}
@@ -191,11 +192,7 @@ public class ARPLayer implements BaseLayer {
 			//op코드를 2로 바꾸고
 			//target의 MAC주소를 확보한 상태
 			
-		for(int i=0; i<ARP_header_added_bytes.length; i++) 
-			System.out.print(ARP_header_added_bytes[i]+" ");
-		System.out.println();
-		
-		//this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);
+		this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);
 		return false;
 	}
 	

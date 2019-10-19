@@ -15,7 +15,7 @@ public class EthernetLayer implements BaseLayer {
 	private final static byte[] enetType_FILE = byte4To2(intToByte(0x2090));
 	private final static byte[] enetType_ARP = byte4To2(intToByte(0x0806));
 	private final static byte[] enetType_IP = byte4To2(intToByte(0x0800));
-	private final static byte[] broadcastAddr = { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF };
+	private final static byte[] broadcastAddr = { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF };
 
 	private class _ETHERNET_ADDR {
 		private byte[] addr = new byte[6];
@@ -54,7 +54,7 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public void ResetHeader() {
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 6; i++) {
 			m_sHeader.enet_dstaddr.addr[i] = (byte) 0x00;
 			m_sHeader.enet_srcaddr.addr[i] = (byte) 0x00;
 		}
@@ -78,13 +78,15 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public void SetEnetDstAddress(byte[] input) {
-		for (int i = 0; i < 5; i++) {
+		System.out.println("header len = " + m_sHeader.enet_dstaddr.addr.length);
+		System.out.println("input len = " + input.length);
+		for (int i = 0; i < 6; i++) {
 			m_sHeader.enet_dstaddr.addr[i] = input[i];
 		}
 	}
 
 	public void SetEnetSrcAddress(byte[] input) {
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 6; i++) {
 			m_sHeader.enet_srcaddr.addr[i] = input[i];
 		}
 	}
@@ -127,9 +129,14 @@ public class EthernetLayer implements BaseLayer {
 			SetEnetDstAddress(broadcastAddr);
 		}
 	//인코딩
-		byte[] bytes = ObjToByte(m_sHeader, input, length);
+		byte[] Ether_header_added_bytes = ObjToByte(m_sHeader, input, length);
 		
-		this.GetUnderLayer().Send(bytes, length + 14);
+		for(int i=0; i<Ether_header_added_bytes.length; i++) 
+			System.out.print(Ether_header_added_bytes[i]+" ");
+		System.out.println();
+
+		
+		//this.GetUnderLayer().Send(Ether_header_added_bytes, length + 14);
 		return false;
 	}
 
