@@ -125,25 +125,36 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
-		if (needToBroadCast(input)) {
-			SetEnetDstAddress(broadcastAddr);
-		}
-	//인코딩
-		byte[] Ether_header_added_bytes = ObjToByte(m_sHeader, input, length);
 		
-		for(int i=0; i<Ether_header_added_bytes.length; i++) 
-			System.out.print(Ether_header_added_bytes[i]+" ");
-		System.out.println();
-
 		
-		//this.GetUnderLayer().Send(Ether_header_added_bytes, length + 14);
+		setEtherHeader(input);
+		byte[] bytes = ObjToByte(m_sHeader, input, length);
+		
+		this.GetUnderLayer().Send(bytes, length + 14);
 		return false;
+	}
+
+	public void setEtherHeader(byte[] input) {
+		byte[] my_enetType = new byte[2];
+		byte[] my_dstAddress = new byte[6];
+		byte[] my_srcAddress = new byte[6];
+		
+		System.arraycopy(enetType_ARP, 0, my_enetType, 0, 2);
+		System.arraycopy(input, 14, my_srcAddress, 0, 6);
+		if(needToBroadCast(input)) {
+			System.arraycopy(broadcastAddr, 0, my_dstAddress, 0, 6);
+		} else 
+			System.arraycopy(input, 18, my_dstAddress, 0, 6);
+		
+		SetEnetType(my_enetType);
+		SetEnetDstAddress(my_dstAddress);
+		SetEnetSrcAddress(my_srcAddress);
 	}
 
 	// ARP 과제 추가 메서드 sendARP는 필요 없을 것 같아서 삭제했습니다.
 	// ARP 헤더는 ARP layer에서 만드는 거니까 broadcasting 만 해 주면 될 것 같습니다.
 
-	public byte[] getPortNumber() {// ARP 과제 추가 메서드 2
+	public byte[] getPortNumber() {// ARP 과제 추가 메서
 		return null;// 생성될 ARP 테이블을 검색하여 포트 넘버를 제공함
 	}
 
