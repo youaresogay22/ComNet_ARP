@@ -15,8 +15,8 @@ public class ARPLayer implements BaseLayer {
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 	public Map<String, _Cache_Entry> cache_Table = Collections.synchronizedMap(new HashMap<String, _Cache_Entry>());
 	public Set<String> cache_Itr = cache_Table.keySet();
-	private final int OP_ARP_REQUEST = 1;
-	private final int OP_ARP_REPLY = 2;
+	private final byte[] OP_ARP_REQUEST = byte4To2(intToByte(1));
+	private final byte[] OP_ARP_REPLY = byte4To2(intToByte(2));
 	private final byte[] TYPE_ARP = byte4To2(intToByte(0x0806));
 	private final byte[] PROTOCOL_TYPE_IP = byte4To2(intToByte(0x0800));
 
@@ -70,13 +70,13 @@ public class ARPLayer implements BaseLayer {
 		public _ARP_HEADER() { // 28byte
 			this.arp_hdType = new byte[2];
 			this.arp_prototype = new byte[2];
-			this.arp_hdLength = (byte) 0x00;
-			this.arp_protoLength = (byte) 0x00;
-			this.arp_op = new byte[2];
-			this.arp_srcHdAddr = new _ETHERNET_ADDR();
-			this.arp_srcProtoAddr = new _IP_ADDR();
-			this.arp_destHdAddr = new _ETHERNET_ADDR();
-			this.arp_destProtoAddr = new _IP_ADDR();
+			this.arp_hdLength = (byte) 0x00;// 4
+			this.arp_protoLength = (byte) 0x00;// 5
+			this.arp_op = new byte[2];// 6~7
+			this.arp_srcHdAddr = new _ETHERNET_ADDR(); // 8~13
+			this.arp_srcProtoAddr = new _IP_ADDR(); // 14~17
+			this.arp_destHdAddr = new _ETHERNET_ADDR();// 18~23
+			this.arp_destProtoAddr = new _IP_ADDR(); // 24~27
 		}
 	}
 
@@ -177,13 +177,19 @@ public class ARPLayer implements BaseLayer {
 
 		@Override
 		public void run() {
+			ArrayList<String> willRemoved = new ArrayList<String>();
 			while (true) {
+
+				for (String ipAddr : willRemoved) {
+					my_cache_Table.remove(ipAddr);
+				}
+
 				try {
 					for (String ipAddr : my_cache_Itr) {
 						_Cache_Entry cacheEntry = my_cache_Table.get(ipAddr);
 						cacheEntry.cache_ttl--;
-						if (cacheEntry.cache_ttl < 1) {
-							my_cache_Table.remove(ipAddr);
+						if (cacheEntry.cache_ttl < 0) {
+							willRemoved.add(ipAddr);
 						}
 					}
 					Thread.sleep(1000);
@@ -210,29 +216,46 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 
-	private boolean isRequest() {
+	private boolean isRequest(byte[] input) {
+		for (int i = 0; i < 2; i++) {
+			if (OP_ARP_REQUEST[i] == input[i + 6])
+				continue;
+			else {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean isReply(byte[] input) {
+		for (int i = 0; i < 2; i++) {
+			if (OP_ARP_REPLY[i] == input[i + 6])
+				continue;
+			else {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean isProxyARP(byte[] input) {
 		return false;
 	}
 
-	private boolean isReply() {
-		return false;
-	}
-
-	private boolean isBasicARP() {
-		return false;
-	}
-
-	private boolean isProxyARP() {
-		return false;
-	}
-
-	private boolean isGratuitousARP() {
-		return false;
+	private boolean isGratuitousARP(byte[] input) {
+		for (int i = 0; i < 6; i++) {
+			if (input[i+14] == input[i + 24])
+				continue;
+			else {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private boolean IsItMine(byte[] input) {
 		for (int i = 0; i < 6; i++) {
-			if (m_aHeader.arp_destHdAddr.addr[i] == input[i])
+			if (m_aHeader.arp_srcHdAddr.addr[i] == input[i + 18])
 				continue;
 			else {
 				return false;
@@ -243,16 +266,54 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean Receive(byte[] input) {
 		byte[] data;
-		boolean Mine, Broadcast;
+		boolean Mine = IsItMine(input);
 
-		/*
-		 * else if () {
-		 * 
-		 * } else() {
-		 * 
-		 * }
-		 */
-		return false;
+		if (isRequest(input)) {// ARP request 인 경우
+			if (isProxyARP(input)) {// proxy ARP request 인 경우
+				if (Mine) {
+					// then proxy send
+					return true;
+				} else
+					return false;
+			} else if (isGratuitousARP(input)) {// Gratuitous ARP request 인 경우
+				if (Mine) {
+					// then Gratuitous send
+					return true;
+				} else
+					return false;
+			} else {// basic ARP request 인 경우
+				if (Mine) {
+					// then basic send
+					return true;
+				} else
+					return false;
+			}
+		}
+
+		else if (isReply(input)) {// ARP reply 인 경우
+			if (isProxyARP(input)) {// proxy ARP reply 인 경우
+				if (Mine) {
+					// then proxy send
+					return true;
+				} else
+					return false;
+			} else if (isGratuitousARP(input)) {// Gratuitous ARP reply 인 경우
+				if (Mine) {
+					// then Gratuitous send
+					return true;
+				} else
+					return false;
+			} else {// basic ARP reply 인 경우
+				if (Mine) {
+					// then basic send
+					return true;
+				} else
+					return false;
+			}
+		}
+
+		else
+			return false;
 	}
 
 	@Override
