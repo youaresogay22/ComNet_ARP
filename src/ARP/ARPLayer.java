@@ -12,7 +12,6 @@ public class ARPLayer implements BaseLayer {
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 	
-	private static LayerManager m_LayerMgr = new LayerManager();
 	public Map<String, _Cache_Entry> cache_Table = Collections.synchronizedMap(new HashMap<String, _Cache_Entry>());
 	public Set<String> cache_Itr = cache_Table.keySet(); 
 	
@@ -62,8 +61,16 @@ public class ARPLayer implements BaseLayer {
 		
 		// 캐시테이블 자동 제거 스레드
 	}
-
+	
 	public void ResetHeader() {
+	}
+	
+	public void setSrcAddr(byte[] srcAddr) {
+		this.m_aHeader.arp_srcProtoAddr = srcAddr;
+	}
+	
+	public void setSrcMAC(byte[] srcMAC) {
+		this.m_aHeader.arp_srcHdAddr = srcMAC;
 	}
 	
 	// ARPLayer에서 만든 cache_Table을 다른 Layer에서도 사용할 수 있게끔 해주는 기능.
