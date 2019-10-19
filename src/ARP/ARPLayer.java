@@ -108,6 +108,18 @@ public class ARPLayer implements BaseLayer {
 		m_aHeader.arp_hdLength = (byte) 0x00;
 		m_aHeader.arp_protoLength = (byte) 0x00;
 	}
+	
+	public void setSrcAddr(byte[] srcAddr) {
+		for(int i=0; i<srcAddr.length; i++) {
+			this.m_aHeader.arp_srcProtoAddr.addr[i] = srcAddr[i];
+		}
+	}
+	
+	public void setSrcMAC(byte[] srcMAC) {
+		for(int i=0; i<srcMAC.length; i++) {
+			this.m_aHeader.arp_srcHdAddr.addr[i] = srcMAC[i];
+		}
+	}
 
 	public byte[] ObjToByte(_ARP_HEADER Header, byte[] input, int length) {
 		byte[] buf = new byte[length + 28];

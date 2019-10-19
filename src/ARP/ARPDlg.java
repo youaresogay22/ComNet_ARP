@@ -5,9 +5,13 @@ import java.awt.Color;
 import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -32,7 +36,7 @@ import ARP.ARPLayer._Cache_Entry;
 
 
 @SuppressWarnings("serial")
-public class ARPDlg extends JFrame implements BaseLayer {
+public class ARPDlg extends JFrame implements BaseLayer  {
 
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
@@ -43,6 +47,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	private static LayerManager m_LayerMgr = new LayerManager();
 	static Map<String, _Cache_Entry> cache_Table;
 	static Set<String> cache_Itr;
+	static ArrayList<byte[]> byteArray = new ArrayList<byte[]>();
 	
 	private JTextField TextWrite;	//좌측 "IP주소"
 	private JTextField TextWrite2;	//우측 "H/W주소"
@@ -93,6 +98,8 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.AddLayer(new ARPDlg("GUI"));
 
 		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) )" );
+		
+		
 		
 		 //2초 마다 printCash()를 호출하여 캐시 테이블과 GUI를 갱신하는 쓰레드
 		 Runnable task = () ->{
@@ -251,7 +258,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	///////////////// 버튼 클릭 이벤트
 	class setAddressListener implements ActionListener {
 		@Override
-		public void actionPerformed(ActionEvent e) {
+		public void actionPerformed(ActionEvent e){
 			// ARP 이벤트
 			if (e.getSource() == Item_Delete_Button) { 
 				if (ArpArea.getSelectedValue() != null) {
@@ -268,11 +275,19 @@ public class ARPDlg extends JFrame implements BaseLayer {
 				cache_Table.clear();
 				ARPModel.removeAllElements();
 			}
-			if(e.getSource() == ARP_Send_Button) {			
-				if (isValidIPv4Addr(TextWrite.getText())) {	//올바른 IP주소 형식이 입력되었다면,
-					 ((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText());	//IPLayer의 dst 주소 설정
-					 																		//IPLayer의 src 주소 설정
-					 ((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send(null,0);							// Send 시작
+			if (e.getSource() == ARP_Send_Button) {
+				if (isValidIPv4Addr(TextWrite.getText())) { // 올바른 IP주소 형식이 입력되었다면,
+					((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText()); // IPLayer의 dst 주소 설정
+																							// IPLayer의 src 주소 설정
+					try {
+						byteArray = getAddr();
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcAddr(byteArray.get(1)); //ARPLayer에 SrcAddr 전달
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(byteArray.get(0));  //ARpLayer에 MACAddr 전달
+					} catch (SocketException e1) {
+						e1.printStackTrace();
+					}
+					
+					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send(null, 0); // Send 시작
 				} else {
 					System.out.println("올바른 IP주소를 입력하시오");
 				}
@@ -320,6 +335,44 @@ public class ARPDlg extends JFrame implements BaseLayer {
 					 ARPModel.addElement(String.format("%20s%20s%15s", key , "??????????????", "incomplete")); 
 			 }
 		}
+
+	public ArrayList<byte[]> getAddr() throws SocketException {
+		Enumeration<NetworkInterface> interfaces = null;
+		interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
+		
+		// isUP 중에 MAC과 IP 주소를 출력
+		while (interfaces.hasMoreElements()) {
+			NetworkInterface networkInterface = interfaces.nextElement();
+			if (networkInterface.isUp()) {
+				byte[] mac = new byte[6];
+				byte[] src_ip = new byte[4];
+				if (networkInterface.getHardwareAddress() != null) {	//loop back Interface가 null이므로, 걸러준다.
+					//byte[]
+					
+					mac = networkInterface.getHardwareAddress();	//MAC주소 받기
+					src_ip= networkInterface.getInetAddresses().nextElement().getAddress();	//IP주소 받기
+					
+					for(int i=0; i<mac.length; i++) {
+						System.out.print(mac[i]+" ");
+					}
+					System.out.println("");
+					
+					for(int j=0; j<src_ip.length; j++) {
+						System.out.print(src_ip[j]+ " ");
+					}
+					System.out.println();
+					
+					
+					byteArray.add(mac);
+					byteArray.add(src_ip);
+					return byteArray;
+
+					//break;	//현재 사용중인 NIC 이외에는 필요 없다. 탈출
+				}
+			}
+		}
+		return null;
+	}
 
 	// 팝업창 GUI
 	public void PopupDialog() {
