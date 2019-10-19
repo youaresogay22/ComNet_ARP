@@ -126,7 +126,7 @@ public class EthernetLayer implements BaseLayer {
 		if (needToBroadCast(input)) {
 			SetEnetDstAddress(broadcastAddr);
 		}
-		
+	//인코딩
 		byte[] bytes = ObjToByte(m_sHeader, input, length);
 		
 		this.GetUnderLayer().Send(bytes, length + 14);
