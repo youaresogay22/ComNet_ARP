@@ -15,8 +15,8 @@ public class ARPLayer implements BaseLayer {
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 	public Map<String, _Cache_Entry> cache_Table = Collections.synchronizedMap(new HashMap<String, _Cache_Entry>());
 	public Set<String> cache_Itr = cache_Table.keySet();
-	private final int OP_ARP_REQUEST = 1;
-	private final int OP_ARP_REPLY = 2;
+	private final byte[] OP_ARP_REQUEST = byte4To2(intToByte(1));
+	private final byte[] OP_ARP_REPLY = byte4To2(intToByte(2));
 	private final byte[] TYPE_ARP = byte4To2(intToByte(0x0806));
 	private final byte[] PROTOCOL_TYPE_IP = byte4To2(intToByte(0x0800));
 
@@ -70,13 +70,13 @@ public class ARPLayer implements BaseLayer {
 		public _ARP_HEADER() { // 28byte
 			this.arp_hdType = new byte[2];
 			this.arp_prototype = new byte[2];
-			this.arp_hdLength = (byte) 0x00;
-			this.arp_protoLength = (byte) 0x00;
-			this.arp_op = new byte[2];
-			this.arp_srcHdAddr = new _ETHERNET_ADDR();
-			this.arp_srcProtoAddr = new _IP_ADDR();
-			this.arp_destHdAddr = new _ETHERNET_ADDR();
-			this.arp_destProtoAddr = new _IP_ADDR();
+			this.arp_hdLength = (byte) 0x00;// 4
+			this.arp_protoLength = (byte) 0x00;// 5
+			this.arp_op = new byte[2];// 6~7
+			this.arp_srcHdAddr = new _ETHERNET_ADDR(); // 8~13
+			this.arp_srcProtoAddr = new _IP_ADDR(); // 14~17
+			this.arp_destHdAddr = new _ETHERNET_ADDR();// 18~23
+			this.arp_destProtoAddr = new _IP_ADDR(); // 24~27
 		}
 	}
 
@@ -108,15 +108,15 @@ public class ARPLayer implements BaseLayer {
 		m_aHeader.arp_hdLength = (byte) 0x00;
 		m_aHeader.arp_protoLength = (byte) 0x00;
 	}
-	
+
 	public void setSrcAddr(byte[] srcAddr) {
-		for(int i=0; i<srcAddr.length; i++) {
+		for (int i = 0; i < srcAddr.length; i++) {
 			this.m_aHeader.arp_srcProtoAddr.addr[i] = srcAddr[i];
 		}
 	}
-	
+
 	public void setSrcMAC(byte[] srcMAC) {
-		for(int i=0; i<srcMAC.length; i++) {
+		for (int i = 0; i < srcMAC.length; i++) {
 			this.m_aHeader.arp_srcHdAddr.addr[i] = srcMAC[i];
 		}
 	}
@@ -280,16 +280,22 @@ public class ARPLayer implements BaseLayer {
 
 		@Override
 		public void run() {
+			ArrayList<String> willRemoved = new ArrayList<String>();
 			while (true) {
+
+				for (String ipAddr : willRemoved) {
+					my_cache_Table.remove(ipAddr);
+				}
+
 				try {
 					for (String ipAddr : my_cache_Itr) {
 						_Cache_Entry cacheEntry = my_cache_Table.get(ipAddr);
-						if (cacheEntry.cache_ttl < 1) {
-							my_cache_Table.remove(ipAddr);
-						}
 						cacheEntry.cache_ttl--;
-						Thread.sleep(1000);
+						if (cacheEntry.cache_ttl < 0) {
+							willRemoved.add(ipAddr);
+						}
 					}
+					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -300,7 +306,7 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean run_Clean_Thread(Map<String, _Cache_Entry> table, Set<String> cacheIterator) {
 		tableCleanThread cleanThread = new tableCleanThread(table, cacheIterator);
-		Thread thread = new Thread(cleanThread, "Cleaner");
+		Thread thread = new Thread(cleanThread, "TableCleanthread");
 		thread.start();
 		return true;
 	}
@@ -313,29 +319,46 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 
-	private boolean isRequest() {
+	private boolean isRequest(byte[] input) {
+		for (int i = 0; i < 2; i++) {
+			if (OP_ARP_REQUEST[i] == input[i + 6])
+				continue;
+			else {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean isReply(byte[] input) {
+		for (int i = 0; i < 2; i++) {
+			if (OP_ARP_REPLY[i] == input[i + 6])
+				continue;
+			else {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean isProxyARP(byte[] input) {
 		return false;
 	}
 
-	private boolean isReply() {
-		return false;
-	}
-
-	private boolean isBasicARP() {
-		return false;
-	}
-
-	private boolean isProxyARP() {
-		return false;
-	}
-
-	private boolean isGratuitousARP() {
-		return false;
+	private boolean isGratuitousARP(byte[] input) {
+		for (int i = 0; i < 6; i++) {
+			if (input[i+14] == input[i + 24])
+				continue;
+			else {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private boolean IsItMine(byte[] input) {
 		for (int i = 0; i < 6; i++) {
-			if (m_aHeader.arp_destHdAddr.addr[i] == input[i])
+			if (m_aHeader.arp_srcHdAddr.addr[i] == input[i + 18])
 				continue;
 			else {
 				return false;
@@ -346,8 +369,59 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean Receive(byte[] input) {
 		byte[] data;
+<<<<<<< HEAD
 		boolean Mine, Broadcast;
 		return false;
+=======
+		boolean Mine = IsItMine(input);
+
+		if (isRequest(input)) {// ARP request 인 경우
+			if (isProxyARP(input)) {// proxy ARP request 인 경우
+				if (Mine) {
+					// then proxy send
+					return true;
+				} else
+					return false;
+			} else if (isGratuitousARP(input)) {// Gratuitous ARP request 인 경우
+				if (Mine) {
+					// then Gratuitous send
+					return true;
+				} else
+					return false;
+			} else {// basic ARP request 인 경우
+				if (Mine) {
+					// then basic send
+					return true;
+				} else
+					return false;
+			}
+		}
+
+		else if (isReply(input)) {// ARP reply 인 경우
+			if (isProxyARP(input)) {// proxy ARP reply 인 경우
+				if (Mine) {
+					// then proxy send
+					return true;
+				} else
+					return false;
+			} else if (isGratuitousARP(input)) {// Gratuitous ARP reply 인 경우
+				if (Mine) {
+					// then Gratuitous send
+					return true;
+				} else
+					return false;
+			} else {// basic ARP reply 인 경우
+				if (Mine) {
+					// then basic send
+					return true;
+				} else
+					return false;
+			}
+		}
+
+		else
+			return false;
+>>>>>>> branch 'master' of https://github.com/youaresogay22/ComNet_ARP.git
 	}
 
 	@Override
