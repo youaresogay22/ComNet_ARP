@@ -120,6 +120,22 @@ public class ARPLayer implements BaseLayer {
 			this.m_aHeader.arp_srcHdAddr.addr[i] = srcMAC[i];
 		}
 	}
+	
+	public _ETHERNET_ADDR getDstAddr() {
+		return this.m_aHeader.arp_destHdAddr;
+	}
+	
+	public _ETHERNET_ADDR getSrcAddr() {
+		return this.m_aHeader.arp_srcHdAddr;
+	}
+	
+	public _IP_ADDR getScrIPAddr() {
+		return this.m_aHeader.arp_srcProtoAddr;
+	}
+	
+	public _IP_ADDR getDstIpAddr() {
+		return this.m_aHeader.arp_destProtoAddr;
+	}
 
 	public byte[] ObjToByte(_ARP_HEADER Header, byte[] input, int length) {
 		byte[] buf = new byte[length + 28];
@@ -166,6 +182,93 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 
+	// 어떻게 basicsend와 proxysend 구분할지?
+	// UI에서 입력되는 것은 동일함 03:11, 03:50
+	public boolean proxyRQSend(byte[] input, int length) {
+		//1.ip주소를 cache table에 추가하는 과정
+		//2. arp message 작성
+		byte[] bytes = ObjToByte(m_aHeader, input, length);
+		//3. ethernet으로 보낸다.
+		this.GetUnderLayer().Send(bytes, length + 28);
+		return true;
+	}
+
+	
+	// input은 데이터, length는 데이터 length
+	public boolean proxyRPSend(byte[] input, int length) {
+		// 1. arp message의 target protocol address가 proxy entry에 있는지 확인.
+		// 2. 자신의 proxy entry에 target protocol address가 있으면 arp message 작성
+		// opcode를 reply(2)로 변경
+		// ex) setOpcode(2);
+		
+		
+		
+		
+		byte[] targetPAddr = new byte[6];
+		for(int i = 0; i < 6; i++)
+		{
+		//	targetPAddr[i] = bytes[i+22];
+		}
+		// 찾고자 하는 ip 주소
+		String tIpAddr = targetPAddr.toString();
+		_Cache_Entry cacheEntry;
+		for (String ipAddr : cache_Itr) {
+			cacheEntry = cache_Table.get(ipAddr);
+		}
+		for(int i = 0; i < 6; i++) {
+			//if(m_aHeader.)
+			//cacheEntry.cache_ethaddr.toString();
+		}
+		
+		
+		// _Cache_Entry의 cache_ethaddr를 destProtoAddr에 넣는다.
+		
+		
+		
+		
+		
+		
+		// 주소 swapping
+		_ARP_HEADER temp = new _ARP_HEADER();
+		temp.arp_srcHdAddr = m_aHeader.arp_srcHdAddr;
+		temp.arp_srcProtoAddr = m_aHeader.arp_srcProtoAddr;
+		
+		for(int i = 0; i < 6; i++)
+		{
+			//targetPAddr[i] = bytes[i+22];
+			//bytes[12+i] = bytes[22+i];
+			//bytes[22+i] = temp.arp_srcHdAddr[i];
+		}
+		
+		byte[] bytes = ObjToByte(m_aHeader, input, length);
+		this.GetUnderLayer().Send(bytes, length +28);
+		return true;
+	}
+	
+	public static byte[] intToByte(int value) {
+		byte[] byteArray = new byte[4];
+		byteArray[0] = (byte) (value >> 24);
+		byteArray[1] = (byte) (value >> 16);
+		byteArray[2] = (byte) (value >> 8);
+		byteArray[3] = (byte) (value);
+		return byteArray;
+	}
+
+	public static byte[] byte4To2(byte[] fourByte) {
+		byte[] byteArray = new byte[2];
+		byteArray[0] = fourByte[2];
+		byteArray[1] = fourByte[3];
+		return byteArray;
+	}
+	
+	public boolean proxyRQReceive() {
+		return false;
+	}
+	
+	public boolean proxyRPReceive() {
+		return false;
+	}
+	
 	private class tableCleanThread implements Runnable {
 		private Map<String, _Cache_Entry> my_cache_Table;
 		private Set<String> my_cache_Itr;
@@ -244,16 +347,6 @@ public class ARPLayer implements BaseLayer {
 	public boolean Receive(byte[] input) {
 		byte[] data;
 		boolean Mine, Broadcast;
-		
-		if (Broadcast) {
-
-
-		} else if () {
-			
-		} else() {
-			
-		}
-
 		return false;
 	}
 
