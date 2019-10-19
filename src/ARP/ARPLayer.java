@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import ARP.IPLayer._IP_ADDR;
+import ARP.EthernetLayer;
 
 public class ARPLayer implements BaseLayer {
 	public int nUpperLayerCount = 0;
@@ -64,6 +66,13 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public void ResetHeader() {
+		for (int i = 0; i < 5; i++) {
+			m_aHeader.enet_dstaddr.addr[i] = (byte) 0x00;
+			m_aHeader.enet_srcaddr.addr[i] = (byte) 0x00;
+		}
+		m_aHeader.enet_type[0] = (byte) 0x00;
+		m_aHeader.enet_type[1] = (byte) 0x00;
+		m_aHeader.enet_data = null;
 	}
 	
 	// ARPLayer에서 만든 cache_Table을 다른 Layer에서도 사용할 수 있게끔 해주는 기능.

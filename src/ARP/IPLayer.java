@@ -9,7 +9,7 @@ public class IPLayer implements BaseLayer {
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 
-	private class _IP_ADDR {
+	public class _IP_ADDR {
 		private byte[] addr = new byte[4];
 
 		public _IP_ADDR() {
