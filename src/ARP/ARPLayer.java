@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import ARP.IPLayer._IP_HEADER;
-
 public class ARPLayer implements BaseLayer {
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
@@ -84,7 +82,7 @@ public class ARPLayer implements BaseLayer {
 		// TODO Auto-generated constructor stub
 		pLayerName = pName;
 		ResetHeader();
-
+		run_Clean_Thread(cache_Table, cache_Itr);
 		// 캐시테이블 자동 제거 스레드
 	}
 
@@ -105,19 +103,19 @@ public class ARPLayer implements BaseLayer {
 		m_aHeader.arp_hdLength = (byte) 0x00;
 		m_aHeader.arp_protoLength = (byte) 0x00;
 	}
-	
+
 	public byte[] ObjToByte(_ARP_HEADER Header, byte[] input, int length) {
 		byte[] buf = new byte[length + 28];
 
-		System.arraycopy(Header.arp_hdType, 0, buf, 0, 2); // 2byte 
-		System.arraycopy(Header.arp_prototype, 0, buf, 2, 2); // 2byte 
-		buf[4] = Header.arp_hdLength; // 1byte 
-		buf[5] = Header.arp_protoLength; // 1byte 
-		System.arraycopy(Header.arp_op, 0, buf, 6, 2); // 2byte 
-		System.arraycopy(Header.arp_srcHdAddr, 0, buf, 8, 6); // 6byte 
-		System.arraycopy(Header.arp_srcProtoAddr, 0, buf, 14, 4); // 4byte 
-		System.arraycopy(Header.arp_destHdAddr, 0, buf, 18, 6); // 6byte 
-		System.arraycopy(Header.arp_destProtoAddr, 0, buf, 24, 4); // 4byte 
+		System.arraycopy(Header.arp_hdType, 0, buf, 0, 2); // 2byte
+		System.arraycopy(Header.arp_prototype, 0, buf, 2, 2); // 2byte
+		buf[4] = Header.arp_hdLength; // 1byte
+		buf[5] = Header.arp_protoLength; // 1byte
+		System.arraycopy(Header.arp_op, 0, buf, 6, 2); // 2byte
+		System.arraycopy(Header.arp_srcHdAddr, 0, buf, 8, 6); // 6byte
+		System.arraycopy(Header.arp_srcProtoAddr, 0, buf, 14, 4); // 4byte
+		System.arraycopy(Header.arp_destHdAddr, 0, buf, 18, 6); // 6byte
+		System.arraycopy(Header.arp_destProtoAddr, 0, buf, 24, 4); // 4byte
 
 		for (int i = 0; i < length; i++)
 			buf[28 + i] = input[i];
@@ -150,8 +148,45 @@ public class ARPLayer implements BaseLayer {
 		System.out.println("SIZE == " + cache_Table.size());
 		return false;
 	}
-	
+
+	private class tableCleanThread implements Runnable {
+		private Map<String, _Cache_Entry> my_cache_Table;
+		private Set<String> my_cache_Itr;
+
+		public tableCleanThread(Map<String, _Cache_Entry> cachetable, Set<String> cacheIterator) {
+			this.my_cache_Table = cachetable;
+			this.my_cache_Itr = cacheIterator;
+		}
+
+		@Override
+		public void run() {
+			while (true) {
+				try {
+					for (String ipAddr : my_cache_Itr) {
+						_Cache_Entry cacheEntry = my_cache_Table.get(ipAddr);
+						if (cacheEntry.cache_ttl < 1) {
+							my_cache_Table.remove(ipAddr);
+						}
+						cacheEntry.cache_ttl -= 1;
+						Thread.sleep(1000);
+					}
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	public boolean run_Clean_Thread(Map<String, _Cache_Entry> table, Set<String> cacheIterator) {
+		tableCleanThread cleanThread = new tableCleanThread(table, cacheIterator);
+		Thread thread = new Thread(cleanThread, "TableCleanThread");
+		thread.start();
+		return true;
+	}
+
 	public boolean Receive(byte[] input) {
+
 		return false;
 	}
 
