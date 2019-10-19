@@ -9,16 +9,16 @@ public class ARPLayer2 implements BaseLayer {
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 
 	private class _ARP_HEADER {
-		byte[] arp_hdType;		// Ethernet = 1
-		byte[] arp_prototype;	// IP = 0x0800 ARP = 0x0806. 본 과제에서는 IP만 쓴다? 02강 05:40
-		byte arp_hdLength;		// MAC address = 6
-		byte arp_protoLength;	// IP address = 4
-		byte[] arp_op;			// request = 1, reply = 2
-		byte[] arp_srcHdAddr;	// Sender's Ethernet Address
+		byte[] arp_hdType; // Ethernet = 1
+		byte[] arp_prototype; // IP = 0x0800 ARP = 0x0806. 본 과제에서는 IP만 쓴다? 02강 05:40
+		byte arp_hdLength; // MAC address = 6
+		byte arp_protoLength; // IP address = 4
+		byte[] arp_op; // request = 1, reply = 2
+		byte[] arp_srcHdAddr; // Sender's Ethernet Address
 		byte[] arp_srcProtoAddr;// Sender's IP Address
-		byte[] arp_destHdAddr;;
-		byte[] arp_destProtoAddr;
- 
+		byte[] arp_destHdAddr; // 수신자 MAC 주소
+		byte[] arp_destProtoAddr; // 수신자 IP주소
+
 		public _ARP_HEADER() {
 			this.arp_hdType = new byte[2];
 			this.arp_prototype = new byte[2];
@@ -39,7 +39,7 @@ public class ARPLayer2 implements BaseLayer {
 		// TODO Auto-generated constructor stub
 		pLayerName = pName;
 		ResetHeader();
-		
+
 		// 캐시테이블 자동 제거 스레드
 	}
 
@@ -48,7 +48,22 @@ public class ARPLayer2 implements BaseLayer {
 	}
 
 	public void ResetHeader() {
+		for (int i = 0; i < 4; i++) {
+			m_aHeader.ip_src.addr[i] = (byte) 0x00;
+			m_aHeader.ip_dst.addr[i] = (byte) 0x00;
+		}
+		for (int i = 0; i < 2; i++) {
+			m_aHeader.ip_len[i] = (byte) 0x00;
+			m_aHeader.ip_id[i] = (byte) 0x00;
+			m_aHeader.ip_fragoff[i] = (byte) 0x00;
+			m_aHeader.ip_cksum[i] = (byte) 0x00;
+		}
+		m_aHeader.ip_verlen = (byte) 0x00;
+		m_aHeader.ip_tos = (byte) 0x00;
+		m_aHeader.ip_ttl = (byte) 0x00;
+		m_aHeader.ip_proto = (byte) 0x00;
 
+		m_aHeader.ip_data = null;
 	}
 
 	// 출발주소 복사(MAC)주소

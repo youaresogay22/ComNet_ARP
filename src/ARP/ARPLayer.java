@@ -108,15 +108,15 @@ public class ARPLayer implements BaseLayer {
 		m_aHeader.arp_hdLength = (byte) 0x00;
 		m_aHeader.arp_protoLength = (byte) 0x00;
 	}
-	
+
 	public void setSrcAddr(byte[] srcAddr) {
-		for(int i=0; i<srcAddr.length; i++) {
+		for (int i = 0; i < srcAddr.length; i++) {
 			this.m_aHeader.arp_srcProtoAddr.addr[i] = srcAddr[i];
 		}
 	}
-	
+
 	public void setSrcMAC(byte[] srcMAC) {
-		for(int i=0; i<srcMAC.length; i++) {
+		for (int i = 0; i < srcMAC.length; i++) {
 			this.m_aHeader.arp_srcHdAddr.addr[i] = srcMAC[i];
 		}
 	}
@@ -181,12 +181,12 @@ public class ARPLayer implements BaseLayer {
 				try {
 					for (String ipAddr : my_cache_Itr) {
 						_Cache_Entry cacheEntry = my_cache_Table.get(ipAddr);
+						cacheEntry.cache_ttl--;
 						if (cacheEntry.cache_ttl < 1) {
 							my_cache_Table.remove(ipAddr);
 						}
-						cacheEntry.cache_ttl--;
-						Thread.sleep(1000);
 					}
+					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -197,7 +197,7 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean run_Clean_Thread(Map<String, _Cache_Entry> table, Set<String> cacheIterator) {
 		tableCleanThread cleanThread = new tableCleanThread(table, cacheIterator);
-		Thread thread = new Thread(cleanThread, "Cleaner");
+		Thread thread = new Thread(cleanThread, "TableCleanthread");
 		thread.start();
 		return true;
 	}
@@ -244,16 +244,14 @@ public class ARPLayer implements BaseLayer {
 	public boolean Receive(byte[] input) {
 		byte[] data;
 		boolean Mine, Broadcast;
-		
-		if (Broadcast) {
 
-
-		} else if () {
-			
-		} else() {
-			
-		}
-
+		/*
+		 * else if () {
+		 * 
+		 * } else() {
+		 * 
+		 * }
+		 */
 		return false;
 	}
 
