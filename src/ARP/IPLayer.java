@@ -94,16 +94,16 @@ public class IPLayer implements BaseLayer {
 	public byte[] ObjToByte(_IP_HEADER Header, byte[] input, int length) {
 		byte[] buf = new byte[length + 20];
 
-		buf[0] = m_iHeader.ip_verlen; // buf에 1byte verlen 초기화
-		buf[1] = m_iHeader.ip_tos; // 1byte tos
-		System.arraycopy(m_iHeader.ip_len, 0, buf, 2, 2); // 2byte len
-		System.arraycopy(m_iHeader.ip_id, 0, buf, 4, 2); // 2byte id
-		System.arraycopy(m_iHeader.ip_fragoff, 0, buf, 6, 2); // 2byte fragoff
-		buf[8] = m_iHeader.ip_ttl; // 1byte ttl
-		buf[9] = m_iHeader.ip_proto; // 1byte proto
-		System.arraycopy(m_iHeader.ip_cksum, 0, buf, 10, 2); // 2byte cksum
-		System.arraycopy(m_iHeader.ip_src.addr, 0, buf, 12, 4); // 4byte src
-		System.arraycopy(m_iHeader.ip_dst.addr, 0, buf, 16, 4); // 4byte dst
+		buf[0] = Header.ip_verlen; // buf에 1byte verlen 초기화
+		buf[1] = Header.ip_tos; // 1byte tos
+		System.arraycopy(Header.ip_len, 0, buf, 2, 2); // 2byte len
+		System.arraycopy(Header.ip_id, 0, buf, 4, 2); // 2byte id
+		System.arraycopy(Header.ip_fragoff, 0, buf, 6, 2); // 2byte fragoff
+		buf[8] = Header.ip_ttl; // 1byte ttl
+		buf[9] = Header.ip_proto; // 1byte proto
+		System.arraycopy(Header.ip_cksum, 0, buf, 10, 2); // 2byte cksum
+		System.arraycopy(Header.ip_src.addr, 0, buf, 12, 4); // 4byte src
+		System.arraycopy(Header.ip_dst.addr, 0, buf, 16, 4); // 4byte dst
 		System.arraycopy(input, 0, buf, 20, length); // IP header에 TCP header 붙이기
 
 		for (int i = 0; i < length; i++)

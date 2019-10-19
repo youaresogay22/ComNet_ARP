@@ -281,8 +281,8 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 																							// IPLayer의 src 주소 설정
 					try {
 						byteArray = getAddr();
-						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcAddr(byteArray.get(0)); //ARPLayer에 SrcAddr 전달
-						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(byteArray.get(1));  //ARpLayer에 MACAddr 전달
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcAddr(byteArray.get(1)); //ARPLayer에 SrcAddr 전달
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(byteArray.get(0));  //ARpLayer에 MACAddr 전달
 					} catch (SocketException e1) {
 						e1.printStackTrace();
 					}
