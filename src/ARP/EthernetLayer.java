@@ -16,20 +16,7 @@ public class EthernetLayer implements BaseLayer {
 	private final static byte[] enetType_ARP = byte4To2(intToByte(0x0806));
 	private final static byte[] enetType_IP = byte4To2(intToByte(0x0800));
 
-	public enum enetType {
-		CHAT((byte) 0x2080), 
-		FILE((byte) 0x2090), 
-		ARP((byte) 0x0806), 
-		IP((byte) 0x0800);
-		
-		private byte protocolNum;
-
-		enetType(int num) {
-			this.protocolNum = (byte) num;
-		}
-	}
-
-	public class _ETHERNET_ADDR {
+	private class _ETHERNET_ADDR {
 		private byte[] addr = new byte[6];
 
 		public _ETHERNET_ADDR() {
