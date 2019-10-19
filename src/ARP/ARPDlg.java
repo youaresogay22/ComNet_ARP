@@ -281,8 +281,13 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 																							// IPLayer의 src 주소 설정
 					try {
 						byteArray = getAddr();
-						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcAddr(byteArray.get(1)); //ARPLayer에 SrcAddr 전달
-						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(byteArray.get(0));  //ARpLayer에 MACAddr 전달
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcProtoAddr(byteArray.get(1)); 	//ARPLayer에 SrcAddr Set
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcHdAddr(byteArray.get(0));  //ARpLayer에 MACAddr Set
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setDestProtoAddr(strToByteArray(TextWrite.getText()));	//ARpLayer에 dstAddr Set
+						
+						
+						((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText());
+						System.out.println("len == " + TextWrite.getText().getBytes().length);
 					} catch (SocketException e1) {
 						e1.printStackTrace();
 					}
@@ -325,6 +330,16 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 				dispose();
 			}
 		}
+	}
+	
+	public byte[] strToByteArray(String str) {
+		byte[] bytes = new byte[4];
+		StringTokenizer st = new StringTokenizer(str, ".");
+
+		for (int i = 0; i < 4; i++)
+			bytes[i] = (byte) Integer.parseInt(st.nextToken());
+		
+		return bytes;
 	}
 	
 	//ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수

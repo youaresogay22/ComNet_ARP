@@ -123,7 +123,7 @@ public class EthernetLayer implements BaseLayer {
 
 	public boolean Send(byte[] input, int length) {
 		byte[] bytes = ObjToByte(m_sHeader, input, length);
-
+		
 		this.GetUnderLayer().Send(bytes, length + 14);
 		return false;
 	}
