@@ -15,6 +15,7 @@ public class EthernetLayer implements BaseLayer {
 	private final static byte[] enetType_FILE = byte4To2(intToByte(0x2090));
 	private final static byte[] enetType_ARP = byte4To2(intToByte(0x0806));
 	private final static byte[] enetType_IP = byte4To2(intToByte(0x0800));
+	private final static byte[] broadcastAddr = { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF };
 
 	private class _ETHERNET_ADDR {
 		private byte[] addr = new byte[6];
@@ -122,6 +123,10 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
+		if (needToBroadCast(input)) {
+			SetEnetDstAddress(broadcastAddr);
+		}
+		
 		byte[] bytes = ObjToByte(m_sHeader, input, length);
 		
 		this.GetUnderLayer().Send(bytes, length + 14);
@@ -133,6 +138,16 @@ public class EthernetLayer implements BaseLayer {
 
 	public byte[] getPortNumber() {// ARP 과제 추가 메서드 2
 		return null;// 생성될 ARP 테이블을 검색하여 포트 넘버를 제공함
+	}
+
+	public boolean needToBroadCast(byte[] input) {// when target MAC address = ???
+		for (int i = 0; i < 6; i++) {
+			if (input[i + 18] == (byte) 0x00)
+				continue;
+			else
+				return false;
+		}
+		return true;
 	}
 
 	public boolean IsItMyPacket(byte[] input) {
