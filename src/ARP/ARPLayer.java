@@ -5,15 +5,20 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import static ARP.EthernetLayer.intToByte;
+import static ARP.EthernetLayer.byte4To2;;
 
 public class ARPLayer implements BaseLayer {
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
-
 	public Map<String, _Cache_Entry> cache_Table = Collections.synchronizedMap(new HashMap<String, _Cache_Entry>());
 	public Set<String> cache_Itr = cache_Table.keySet();
+	private final int OP_ARP_REQUEST = 1;
+	private final int OP_ARP_REPLY = 2;
+	private final byte[] TYPE_ARP = byte4To2(intToByte(0x0806));
+	private final byte[] PROTOCOL_TYPE_IP = byte4To2(intToByte(0x0800));
 
 	public class _Cache_Entry {
 		byte[] cache_ethaddr;
@@ -167,7 +172,7 @@ public class ARPLayer implements BaseLayer {
 						if (cacheEntry.cache_ttl < 1) {
 							my_cache_Table.remove(ipAddr);
 						}
-						cacheEntry.cache_ttl -= 1;
+						cacheEntry.cache_ttl--;
 						Thread.sleep(1000);
 					}
 				} catch (InterruptedException e) {
@@ -180,12 +185,62 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean run_Clean_Thread(Map<String, _Cache_Entry> table, Set<String> cacheIterator) {
 		tableCleanThread cleanThread = new tableCleanThread(table, cacheIterator);
-		Thread thread = new Thread(cleanThread, "TableCleanThread");
+		Thread thread = new Thread(cleanThread, "Cleaner");
 		thread.start();
 		return true;
 	}
 
+	public boolean setRequest() {
+		return false;
+	}
+
+	public boolean setReply() {
+		return false;
+	}
+
+	private boolean isRequest() {
+		return false;
+	}
+
+	private boolean isReply() {
+		return false;
+	}
+
+	private boolean isBasicARP() {
+		return false;
+	}
+
+	private boolean isProxyARP() {
+		return false;
+	}
+
+	private boolean isGratuitousARP() {
+		return false;
+	}
+
+	private boolean IsItMine(byte[] input) {
+		for (int i = 0; i < 6; i++) {
+			if (m_aHeader.arp_destHdAddr.addr[i] == input[i])
+				continue;
+			else {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public boolean Receive(byte[] input) {
+		byte[] data;
+		boolean Mine, Broadcast;
+		
+		if (Broadcast) {
+
+
+		} else if () {
+			
+		} else() {
+			
+		}
 
 		return false;
 	}
