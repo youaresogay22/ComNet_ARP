@@ -319,7 +319,7 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 			}
 			// Grat 이벤트
 			if(e.getSource() == Grat_Send_Button) {
-				System.out.println("Grat Send Button Clicked");
+				((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(strToByteArray2(TextWrite2.getText()));
 			}
 			// 하단 버튼 이벤트
 			if(e.getSource() == Exit_Button) {
@@ -331,11 +331,22 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 		}
 	}
 	
+	//IP
 	public byte[] strToByteArray(String str) {
 		byte[] bytes = new byte[4];
 		StringTokenizer st = new StringTokenizer(str, ".");
 
 		for (int i = 0; i < 4; i++)
+			bytes[i] = (byte) Integer.parseInt(st.nextToken());
+		
+		return bytes;
+	}
+	//MAC
+	public byte[] strToByteArray2(String str) {
+		byte[] bytes = new byte[6];
+		StringTokenizer st = new StringTokenizer(str, ":");
+
+		for (int i = 0; i < 6; i++)
 			bytes[i] = (byte) Integer.parseInt(st.nextToken());
 		
 		return bytes;
