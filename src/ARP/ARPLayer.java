@@ -219,19 +219,33 @@ public class ARPLayer implements BaseLayer {
 		System.out.println("MAP == " + cache_Table);
 		System.out.println("SIZE == " + cache_Table.size());
 		
+		setARPHeaderBeforeSend();	//opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
 		byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
 		
-			//if Request. 03 12page
-			
-			//if Reply. 03 28page
-			//op코드를 2로 바꾸고
-			//target의 MAC주소를 확보한 상태
+		//Request -> Target's hardware addr이 ???이면 request다.
+		//Hadrware type =1
+		//Protocol type = 0x0800
+		//Length of hardware address = 6
+		//Length of protool address = 4
+		//OP Code = 1
+		//Seder's hardware addr = GUI에서 Send버튼을 눌렀을 때 설정
+		//Sender's protocol addr = GUI에서 Send버튼을 눌렀을 때 설정
+		//Target's hardware addr = ??? (000)
+		//Target's protocol addr = GUI에서 Send버튼을 눌렀을 때 설정
+		
+		//Reply -> Target's hardware addr이 ??이 아니면 reply다.
+		//OP code = 2
+		if(isTargetHdAddrQuestion(ARP_header_added_bytes)) {// Request -> Target's hardware addr이 ???이면 request다.
+		}else {	// Reply -> Target's hardware addr이 ??이 아니면 reply다.
+			ARP_header_added_bytes = swappingAddr(input);
+			setOpCode(2);
+		}
 			
 		this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);
 		return false;
 	}
 	
-	   //Grat Send
+	//Grat Send
     public boolean Grat_Send(byte[] input, int length) {
 
         // Sender's protocol address를 get해서 Target's protocol address에 set하기
@@ -248,18 +262,6 @@ public class ARPLayer implements BaseLayer {
         
         return true;
      }
-	// IP HEADER의 dst_addr을 byte[] -> String으로 변환 ex) xxx.xxx.xxx.xxx
-	public String getDstAddrFromHeader(byte[] input, int length) {
-		byte[] bytes = new byte[4];
-		
-		String dst_Addr = "";
-		System.arraycopy(input, 12, bytes, 0, 4);
-		for (byte b : bytes) {
-			dst_Addr += Integer.toString(b & 0xFF) + ".";
-		}
-		return dst_Addr.substring(0, dst_Addr.length() - 1);
-	}
-
 	// 어떻게 basicsend와 proxysend 구분할지?
 	// UI에서 입력되는 것은 동일함 03:11, 03:50
 	public boolean proxyRQSend(byte[] input, int length) {
@@ -370,6 +372,14 @@ public class ARPLayer implements BaseLayer {
 		byteArray[1] = fourByte[3];
 		return byteArray;
 	}
+	
+	public void setARPHeaderBeforeSend() {
+		this.m_aHeader.arp_hdType[0]=1;
+		this.m_aHeader.arp_prototype[0]=(byte) 0x0800;
+		this.m_aHeader.arp_hdLength = 6;
+		this.m_aHeader.arp_protoLength = 4;
+		this.m_aHeader.arp_op[0]=1;
+	}
 		
 	private class tableCleanThread implements Runnable {
 		private Map<String, _Cache_Entry> my_cache_Table;
@@ -419,6 +429,51 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public boolean setReply() {
+		return false;
+	}
+	
+	public byte[] swappingAddr(byte[] input) {
+		byte[] tempMACAddr = new byte[6];
+		byte[] tempProtoAddr = new byte[6];
+		
+		//temp에 src주소 저장
+		for(int i=0; i<6; i++) {
+			tempMACAddr[i] = input[8+i];
+			tempProtoAddr[i] = input[14+i];
+		}
+		for(int j=0; j<6; j++) {			
+			//src에 dst를 저장
+			input[8+j] = input[18+j];
+			input[14+j] = input[24+j];
+			//dst에 src를 저장
+			input[18+j] = tempMACAddr[j];
+			input[24+j] = tempProtoAddr[j];
+		}
+		
+		return input;
+	}
+
+	
+	// IP HEADER의 dst_addr을 byte[] -> String으로 변환 ex) xxx.xxx.xxx.xxx
+		public String getDstAddrFromHeader(byte[] input, int length) {
+			byte[] bytes = new byte[4];
+			
+			String dst_Addr = "";
+			System.arraycopy(input, 12, bytes, 0, 4);
+			for (byte b : bytes) {
+				dst_Addr += Integer.toString(b & 0xFF) + ".";
+			}
+			return dst_Addr.substring(0, dst_Addr.length() - 1);
+		}
+	
+
+	public boolean isTargetHdAddrQuestion(byte[] input) {
+		for(int i=0; i<6; i++) {
+			if(input[18+i] == 0)
+				return true;
+			else
+				return false;
+		}
 		return false;
 	}
 
