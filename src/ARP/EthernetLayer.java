@@ -125,8 +125,6 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
-		
-		
 		setEtherHeader(input);
 		byte[] bytes = ObjToByte(m_sHeader, input, length);
 		
@@ -135,20 +133,21 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public void setEtherHeader(byte[] input) {
-		byte[] my_enetType = new byte[2];
 		byte[] my_dstAddress = new byte[6];
 		byte[] my_srcAddress = new byte[6];
+		byte[] my_enetType = new byte[2];
 		
-		System.arraycopy(enetType_ARP, 0, my_enetType, 0, 2);
-		System.arraycopy(input, 14, my_srcAddress, 0, 6);
 		if(needToBroadCast(input)) {
 			System.arraycopy(broadcastAddr, 0, my_dstAddress, 0, 6);
 		} else 
 			System.arraycopy(input, 18, my_dstAddress, 0, 6);
 		
-		SetEnetType(my_enetType);
+		System.arraycopy(input, 8, my_srcAddress, 0, 6);
+		System.arraycopy(enetType_ARP, 0, my_enetType, 0, 2);
+		
 		SetEnetDstAddress(my_dstAddress);
 		SetEnetSrcAddress(my_srcAddress);
+		SetEnetType(my_enetType);
 	}
 
 	// ARP 과제 추가 메서드 sendARP는 필요 없을 것 같아서 삭제했습니다.

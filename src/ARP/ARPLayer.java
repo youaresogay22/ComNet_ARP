@@ -393,7 +393,8 @@ public class ARPLayer implements BaseLayer {
 					for (String ipAddr : my_cache_Itr) {
 						_Cache_Entry cacheEntry = my_cache_Table.get(ipAddr);
 						cacheEntry.cache_ttl--;
-						if (cacheEntry.cache_ttl < 0) {
+						System.out.println("ARP레이어 테이블:"+cacheEntry.cache_ttl);
+						if (cacheEntry.cache_ttl < 1) {
 							willRemoved.add(ipAddr);
 						}
 					}
