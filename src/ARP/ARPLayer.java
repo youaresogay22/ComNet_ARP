@@ -1,8 +1,7 @@
 package ARP;
 
 import java.util.ArrayList;
-
-
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -346,7 +345,7 @@ public class ARPLayer implements BaseLayer {
 		_ETHERNET_ADDR myMAC = new _ETHERNET_ADDR();
 		// 나에게 온 message가 맞다면
 		// arrays.equal로 비교할 것.
-		if (targetIP == myIP && targetMAC == myMAC) {
+		if (Arrays.equals(myIP.addr, targetIP.addr) && Arrays.equals(targetMAC.addr, myMAC.addr)){
 			// sender의 proto addr이 내 cache table에 있는지 확인
 			_IP_ADDR senderIP = getSrcIPAddr();
 			String srcIpAddr = senderIP.toString();
@@ -448,7 +447,18 @@ public class ARPLayer implements BaseLayer {
 		return true;
 	}
 
+	// target IP address가 나의 ip주소는 아니지만,
+	// 내 cache_Table에 target ip address가 있을 때 proxy arp
 	private boolean isProxyARP(byte[] input) {
+		// 나의 IP를 가져온다
+		_IP_ADDR myIp = new _IP_ADDR();
+		_IP_ADDR target = new _IP_ADDR();
+		for(int i = 0; i < 6 ; i++) {
+			target.addr[i] = input[i+24];
+		}
+		if(!Arrays.equals(myIp.addr, target.addr) && cache_Table.containsKey(target.addr) == true) {
+			return true;
+		}
 		return false;
 	}
 
