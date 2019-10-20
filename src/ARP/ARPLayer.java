@@ -166,15 +166,38 @@ public class ARPLayer implements BaseLayer {
 	public byte[] ObjToByte(_ARP_HEADER Header, byte[] input, int length) {
 		byte[] buf = new byte[length + 28];
 
-		System.arraycopy(Header.arp_hdType, 0, buf, 0, 2); // 2byte
-		System.arraycopy(Header.arp_prototype, 0, buf, 2, 2); // 2byte
-		buf[4] = Header.arp_hdLength; // 1byte
-		buf[5] = Header.arp_protoLength; // 1byte
-		System.arraycopy(Header.arp_op, 0, buf, 6, 2); // 2byte
-		System.arraycopy(Header.arp_srcHdAddr, 0, buf, 8, 6); // 6byte
-		System.arraycopy(Header.arp_srcProtoAddr, 0, buf, 14, 4); // 4byte
-		System.arraycopy(Header.arp_destHdAddr, 0, buf, 18, 6); // 6byte
-		System.arraycopy(Header.arp_destProtoAddr, 0, buf, 24, 4); // 4byte
+		buf[0] = Header.arp_hdType[0];
+		buf[1] = Header.arp_hdType[1];
+		buf[2] = Header.arp_prototype[0];
+		buf[3] = Header.arp_prototype[1];
+		buf[4] = Header.arp_hdLength;
+		buf[5] = Header.arp_protoLength; 
+		buf[6] = Header.arp_op[0];
+		buf[7] = Header.arp_op[1];
+
+		buf[8] = Header.arp_srcHdAddr.addr[0];
+		buf[9] = Header.arp_srcHdAddr.addr[1];
+		buf[10] = Header.arp_srcHdAddr.addr[2];
+		buf[11] = Header.arp_srcHdAddr.addr[3];
+		buf[12] = Header.arp_srcHdAddr.addr[4];
+		buf[13] = Header.arp_srcHdAddr.addr[5];
+
+		buf[14] = Header.arp_srcProtoAddr.addr[0];
+		buf[15] = Header.arp_srcProtoAddr.addr[1];
+		buf[16] = Header.arp_srcProtoAddr.addr[2];
+		buf[17] = Header.arp_srcProtoAddr.addr[3];
+
+		buf[18] = Header.arp_destHdAddr.addr[0];
+		buf[19] = Header.arp_destHdAddr.addr[1];
+		buf[20] = Header.arp_destHdAddr.addr[2];
+		buf[21] = Header.arp_destHdAddr.addr[3];
+		buf[22] = Header.arp_destHdAddr.addr[4];
+		buf[23] = Header.arp_destHdAddr.addr[5];
+
+		buf[24] = Header.arp_destProtoAddr.addr[0];
+		buf[25] = Header.arp_destProtoAddr.addr[1];
+		buf[26] = Header.arp_destProtoAddr.addr[2];
+		buf[27] = Header.arp_destProtoAddr.addr[3];
 
 		for (int i = 0; i < length; i++)
 			buf[28 + i] = input[i];
@@ -318,26 +341,24 @@ public class ARPLayer implements BaseLayer {
 		// 3. 있다면 sender hd address를 cache_Table에 업데이트
 		_IP_ADDR targetIP = getDstIpAddr();
 		_ETHERNET_ADDR targetMAC = getDstMAC();
-		// 나의 mac과 나의 ip를 가져오는 코드 없으므로 임시로 작성
+		// ★★★★★ 나의 mac과 나의 ip를 가져오는 코드 없으므로 임시로 작성
 		_IP_ADDR myIP = new _IP_ADDR();
 		_ETHERNET_ADDR myMAC = new _ETHERNET_ADDR();
 		// 나에게 온 message가 맞다면
-		if(targetIP == myIP && targetMAC == myMAC){
+		// arrays.equal로 비교할 것.
+		if (targetIP == myIP && targetMAC == myMAC) {
 			// sender의 proto addr이 내 cache table에 있는지 확인
 			_IP_ADDR senderIP = getSrcIPAddr();
 			String srcIpAddr = senderIP.toString();
 			_ETHERNET_ADDR senderMAC = getSrcMAC();
-			// ★ 여기부터 ehtaddr에  새롭게 알게된 맥주소를 넣을 것
-			byte[] ethaddr = new byte[6];
 			// 내 cache_Table에 있다면 내 cache_table에 sender hd address 업데이트
-			if(cache_Table.containsKey(srcIpAddr)==true) {
-				cache_Table.replace(srcIpAddr, new _Cache_Entry(ethaddr, "Complete", 10));
+			if (cache_Table.containsKey(srcIpAddr) == true) {
+				cache_Table.replace(srcIpAddr, new _Cache_Entry(senderMAC.addr, "Complete", 10));
 			}
 			return true;
 		}
 		return false;
 	}
-	
 	
 	public static byte[] intToByte(int value) {
 		byte[] byteArray = new byte[4];
@@ -452,6 +473,7 @@ public class ARPLayer implements BaseLayer {
 		}
 		return true;
 	}
+	
 	public String extractIPString(byte[] input) {//ARP 데이터구조에서 IP string을 추출
 		byte[] bytes = new byte[4];
 		String ar = "";
@@ -465,7 +487,6 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean Receive(byte[] input) {
 		byte[] data;
-
 		boolean Broadcast;
 		boolean Mine = IsItMine(input);
 
@@ -490,7 +511,6 @@ public class ARPLayer implements BaseLayer {
 					return false;
 			}
 		}
-
 		else if (isReply(input)) {// ARP reply 인 경우
 			byte[] tableEtherAddr = cache_Table.get(extractIPString(input)).cache_ethaddr;
 			System.arraycopy(input, 0, tableEtherAddr, 0, 6);//cache table update 실행
@@ -515,7 +535,6 @@ public class ARPLayer implements BaseLayer {
 					return false;
 			}
 		}
-
 		else
 			return false;
 	}
