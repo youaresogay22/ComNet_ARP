@@ -188,11 +188,11 @@ public class ARPLayer implements BaseLayer {
 		buf[17] = Header.arp_srcProtoAddr.addr[3];
 
 		buf[18] = Header.arp_destHdAddr.addr[0];
-		buf[19] = Header.arp_destHdAddr.addr[0];
-		buf[20] = Header.arp_destHdAddr.addr[0];
-		buf[21] = Header.arp_destHdAddr.addr[0];
-		buf[22] = Header.arp_destHdAddr.addr[0];
-		buf[23] = Header.arp_destHdAddr.addr[0];
+		buf[19] = Header.arp_destHdAddr.addr[1];
+		buf[20] = Header.arp_destHdAddr.addr[2];
+		buf[21] = Header.arp_destHdAddr.addr[3];
+		buf[22] = Header.arp_destHdAddr.addr[4];
+		buf[23] = Header.arp_destHdAddr.addr[5];
 
 		buf[24] = Header.arp_destProtoAddr.addr[0];
 		buf[25] = Header.arp_destProtoAddr.addr[1];
