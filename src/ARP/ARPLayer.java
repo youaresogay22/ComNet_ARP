@@ -232,27 +232,23 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 	
-	//Grat Send
+	   //Grat Send
     public boolean Grat_Send(byte[] input, int length) {
-        
-        // 변경할 MAC주소 받기, Dlg에서 가져오기
-        byte[] mac_bytes = new byte[6];
-        setSrcMAC(mac_bytes);
-        
-        // Target's protocol address 변경, EthernetLayer에서 가져오기
-        byte[] tp_bytes = new byte[6];
-        
-        // 함수 이름 변경됬습니다 - 문영
+
+        // Sender's protocol address를 get해서 Target's protocol address에 set하기
+        // Sender's protocol address를 get
+        byte[] tp_bytes = getSrcIPAddr().addr;
+        // Target's protocol address에 set
         setDstIPAddr(tp_bytes);
         
-        ObjToByte(m_aHeader, null, length); // ARPMessage
+        // Gratuitous ARP Message 생성
+        byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
         
-        // 내려보내기
-        this.GetUnderLayer().Send();
+        // Gratuitous ARP Message 내려보내기
+        this.GetUnderLayer().Send(grat_message, grat_message.length);
         
         return true;
      }
-	
 	// IP HEADER의 dst_addr을 byte[] -> String으로 변환 ex) xxx.xxx.xxx.xxx
 	public String getDstAddrFromHeader(byte[] input, int length) {
 		byte[] bytes = new byte[4];
