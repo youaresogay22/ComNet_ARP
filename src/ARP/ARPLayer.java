@@ -265,8 +265,9 @@ public class ARPLayer implements BaseLayer {
 		return true;
 	}
 
-	// 어떻게 basicsend와 proxysend 구분할지?
-	// UI에서 입력되는 것은 동일함 03:11, 03:50
+	// 각 send 함수에서 header를 세팅해서 ObjToByte로 보내주기 때문에 
+    // ObjToByte는 이미 set 되어 있는 헤더의 필드 값을 넣어주기만 한다.
+    // ∴header setting은 각 send 함수에서 해주어야 함.
 	public boolean proxyRQSend(byte[] input, int length) {
 		// 1.ip주소를 cache table에 추가하는 과정
 		// 2. arp message 작성
@@ -274,11 +275,21 @@ public class ARPLayer implements BaseLayer {
 		// setProtoType(0x800);
 		// setLengthOfHdAddr(6);
 		// setLengthOfProtoAddr(4);
-		// setOpCode(1);
+		setOpCode(1); // request
 		setSrcMAC(MY_MAC_ADDRESS.addr); // 자기 맥주소 가져와서 넣기
 		setSrcIPAddr(MY_IP_ADDRESS.addr); // 자기 ip주소 가져와서 넣기
-		// setDstMAC(); 00:00:00:00:00:00
+		// setDstMac에 00:00:00:00:00:00 넣기
+		_ETHERNET_ADDR dstMac = new _ETHERNET_ADDR();
+		for (int i = 0; i < 6; i++) {
+			dstMac.addr[i] = (byte) 0x00;
+		}
+		setDstMAC(dstMac.addr);
 		// setDstIPAddr(); ui로 입력받은 ip주소 넣기
+		_IP_ADDR dstIp = new _IP_ADDR();
+		for (int i = 0; i < 4; i++) {
+			dstIp.addr[i] = input[24 + i];
+		}
+		setDstIPAddr(dstIp.addr);
 		byte[] bytes = ObjToByte(m_aHeader, input, length);
 		// 3. ethernet으로 보낸다.
 		this.GetUnderLayer().Send(bytes, length + 28);
@@ -287,14 +298,18 @@ public class ARPLayer implements BaseLayer {
 
 	// input은 데이터, length는 데이터 length
 	public boolean proxyRPSend(byte[] input, int length) {
-		// 1. arp message의 target protocol address가 proxy entry에 있는지 이미 확인 함.
+		// 1. arp message의 target protocol address가 proxy entry에 있는지 이미이미
+		// proxyRQReceive에서 확인함. 확인 함.
 		// 2. arp message 작성
 		// setHdtype(1);
 		// setProtoType(0x800);
 		// setLengthOfHdAddr(6);
 		// setLengthOfProtoAddr(4);
-		// 헤더의 target protocol address를 가져온다.
-		_IP_ADDR target = getDstIpAddr();
+		// target protocol address를 가져온다.
+		_IP_ADDR target = new _IP_ADDR();
+		for (int i = 0; i < 4; i++) {
+			target.addr[i] = input[i + 24];
+		}
 		// cache table에서 찾기 위해 target protocol address를 string으로 변환
 		String tIpAddr = target.toString();
 		// 찾은 ip주소로 target hardware address를 가져온다.
@@ -318,12 +333,14 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean proxyRQReceive(byte[] input, int length) {
 		// 1. arp cache table 업데이트
-		byte[] address = new byte[6];
-		System.arraycopy(m_aHeader.arp_destHdAddr, 0, address, 0, 6);
-		_Cache_Entry newEntry = new _Cache_Entry(address, "Complete", 10);
+		_Cache_Entry newEntry = new _Cache_Entry(m_aHeader.arp_srcHdAddr.addr, "Complete", 10);
+		cache_Table.put(m_aHeader.arp_srcProtoAddr.toString(), newEntry);
 		// 2. target protocol address가 cache table에 있는지 확인
 		// 헤더의 target protocol address를 가져온다.
-		_IP_ADDR target = getDstIpAddr();
+		_IP_ADDR target =new _IP_ADDR();
+		for(int i = 0; i < 4; i++) {
+			target.addr[i] = input[i+24];
+		}
 		// cache table에서 찾기 위해 target protocol address를 string으로 변환
 		String tIpAddr = target.toString();
 		// cache_Table에 target proto addr이 존재하면 proxy reply send
