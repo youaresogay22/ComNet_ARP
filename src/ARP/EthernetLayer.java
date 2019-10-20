@@ -125,8 +125,6 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
-		
-		
 		setEtherHeader(input);
 		byte[] bytes = ObjToByte(m_sHeader, input, length);
 		

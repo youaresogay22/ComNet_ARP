@@ -6,8 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import static ARP.EthernetLayer.intToByte;
-import static ARP.EthernetLayer.byte4To2;;
+import java.net.InetAddress;
 
 public class ARPLayer implements BaseLayer {	   
 	public int nUpperLayerCount = 0;
@@ -20,6 +19,8 @@ public class ARPLayer implements BaseLayer {
 	private final byte[] OP_ARP_REPLY = byte4To2(intToByte(2));
 	private final byte[] TYPE_ARP = byte4To2(intToByte(0x0806));
 	private final byte[] PROTOCOL_TYPE_IP = byte4To2(intToByte(0x0800));
+	public final _IP_ADDR MY_IP_ADDRESS = new _IP_ADDR();
+	public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
 
 	public class _Cache_Entry {
 		byte[] cache_ethaddr;
@@ -231,7 +232,7 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 	
-	   //Grat Send
+	//Grat Send
     public boolean Grat_Send(byte[] input, int length) {
 
         // Sender's protocol address를 get해서 Target's protocol address에 set하기
@@ -270,8 +271,8 @@ public class ARPLayer implements BaseLayer {
 		// setLengthOfHdAddr(6);
 		// setLengthOfProtoAddr(4);
 		// setOpCode(1);
-		// setSrcMAC(); 자기 맥주소 가져와서 넣기
-		// setSrcIPAddr(); 자기 ip주소 가져와서 넣기
+		setSrcMAC(MY_MAC_ADDRESS.addr); //자기 맥주소 가져와서 넣기
+		setSrcIPAddr(MY_IP_ADDRESS.addr); //자기 ip주소 가져와서 넣기
 		// setDstMAC(); 00:00:00:00:00:00
 		// setDstIPAddr(); ui로 입력받은 ip주소 넣기
 		byte[] bytes = ObjToByte(m_aHeader, input, length);
@@ -330,19 +331,14 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 	
-	public boolean proxyRPReceive() {
-		// 1. 내게 온 ARP RP message가 맞는지 확인
-		// 2. sender protocol address가 내 cache_Table에 있는지 확인
-		// 3. 있다면 sender hd address를 cache_Table에 업데이트
+	public boolean proxyRPReceive(byte[] input) {
+		// 헤더에서 target ip, target mac 가져오기
 		_IP_ADDR targetIP = getDstIpAddr();
 		_ETHERNET_ADDR targetMAC = getDstMAC();
-		// ★★★★★ 나의 mac과 나의 ip를 가져오는 코드 없으므로 임시로 작성
-		_IP_ADDR myIP = new _IP_ADDR();
-		_ETHERNET_ADDR myMAC = new _ETHERNET_ADDR();
-		// 나에게 온 message가 맞다면
-		// arrays.equal로 비교할 것.
-		if (Arrays.equals(myIP.addr, targetIP.addr) && Arrays.equals(targetMAC.addr, myMAC.addr)){
-			// sender의 proto addr이 내 cache table에 있는지 확인
+		// 1. 내게 온 ARP RP message가 맞는지 확인
+		// 나의 ip주소와 target ip가 일치하는지 확인, 나의 mac주소와 target mac주소가 일치하는지 확인
+		if (Arrays.equals(MY_IP_ADDRESS.addr, targetIP.addr) && Arrays.equals(MY_MAC_ADDRESS.addr, targetMAC.addr)){
+			// 2. sender protocol address가 내 cache_Table에 있는지 확인
 			_IP_ADDR senderIP = getSrcIPAddr();
 			String srcIpAddr = senderIP.toString();
 			_ETHERNET_ADDR senderMAC = getSrcMAC();
