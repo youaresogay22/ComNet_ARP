@@ -1,6 +1,8 @@
 package ARP;
 
 import java.util.ArrayList;
+
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,6 +11,55 @@ import static ARP.EthernetLayer.intToByte;
 import static ARP.EthernetLayer.byte4To2;;
 
 public class ARPLayer implements BaseLayer {
+	
+	   public void setSrcIPAddr(byte[] srcAddr) {
+		      for (int i = 0; i < srcAddr.length; i++) {
+		         this.m_aHeader.arp_srcProtoAddr.addr[i] = srcAddr[i];
+		      }
+		   }
+
+		   public void setSrcMAC(byte[] srcMAC) {
+		      for (int i = 0; i < srcMAC.length; i++) {
+		         this.m_aHeader.arp_srcHdAddr.addr[i] = srcMAC[i];
+		      }
+		   }
+		   
+		   public void setDstIPAddr(byte[] dstAddr) {
+		      for (int i = 0; i < dstAddr.length; i++) {
+		         this.m_aHeader.arp_destProtoAddr.addr[i] = dstAddr[i];
+		      }
+		   }
+		   
+		   public void setDstMAC(byte[] dstMAC) {
+		      for (int i = 0; i < dstMAC.length; i++) {
+		         this.m_aHeader.arp_destHdAddr.addr[i] = dstMAC[i];
+		      }
+		   }
+		   
+		   public _ETHERNET_ADDR getDstMAC() {
+		      return this.m_aHeader.arp_destHdAddr;
+		   }
+		   
+		   public _ETHERNET_ADDR getSrcMAC() {
+		      return this.m_aHeader.arp_srcHdAddr;
+		   }
+		   
+		   public _IP_ADDR getScrIPAddr() {
+		      return this.m_aHeader.arp_srcProtoAddr;
+		   }
+		   
+		   public _IP_ADDR getDstIpAddr() {
+		      return this.m_aHeader.arp_destProtoAddr;
+		   }
+		   
+		   public void setOpCode(int value) {
+		      this.m_aHeader.arp_op = byte4To2(intToByte(value));
+		   }
+		   
+		   public byte[] getOpcode() {
+		      return this.m_aHeader.arp_op;
+		   }
+		   
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
@@ -110,16 +161,30 @@ public class ARPLayer implements BaseLayer {
 		m_aHeader.arp_protoLength = (byte) 0x00;
 	}
 
+<<<<<<< HEAD
 	public void setSrcIPAddr(byte[] srcAddr) {
 		for (int i = 0; i < srcAddr.length; i++) {
 			this.m_aHeader.arp_srcProtoAddr.addr[i] = srcAddr[i];
 		}
+=======
+	//Dlg에서 Send버튼을 눌렀을 때 srcAddr,srcMAC,dstAddr을 받아와 Set.
+	public void setSrcProtoAddr(byte[] srcProtoAddr) {
+		for (int i = 0; i < srcProtoAddr.length; i++) 
+			this.m_aHeader.arp_srcProtoAddr.addr[i] = srcProtoAddr[i];
+>>>>>>> refs/remotes/origin/master
 	}
-
-	public void setSrcMAC(byte[] srcMAC) {
-		for (int i = 0; i < srcMAC.length; i++) {
-			this.m_aHeader.arp_srcHdAddr.addr[i] = srcMAC[i];
-		}
+	public void setSrcHdAddr(byte[] srcHdAddr) {
+		for (int i = 0; i < srcHdAddr.length; i++) 
+			this.m_aHeader.arp_srcHdAddr.addr[i] = srcHdAddr[i];
+	}
+	
+	public void setDestProtoAddr(byte[] destProtoAddr) {
+		for(int i=0; i< destProtoAddr.length; i++)
+			this.m_aHeader.arp_destProtoAddr.addr[i] = destProtoAddr[i];
+	}
+	
+	public void setOPCode(byte i) {
+		this.m_aHeader.arp_op[0] = i;
 	}
 	
 	public void setDstIPAddr(byte[] dstAddr) {
@@ -160,16 +225,39 @@ public class ARPLayer implements BaseLayer {
 
 	public byte[] ObjToByte(_ARP_HEADER Header, byte[] input, int length) {
 		byte[] buf = new byte[length + 28];
-
-		System.arraycopy(Header.arp_hdType, 0, buf, 0, 2); // 2byte
-		System.arraycopy(Header.arp_prototype, 0, buf, 2, 2); // 2byte
-		buf[4] = Header.arp_hdLength; // 1byte
-		buf[5] = Header.arp_protoLength; // 1byte
-		System.arraycopy(Header.arp_op, 0, buf, 6, 2); // 2byte
-		System.arraycopy(Header.arp_srcHdAddr, 0, buf, 8, 6); // 6byte
-		System.arraycopy(Header.arp_srcProtoAddr, 0, buf, 14, 4); // 4byte
-		System.arraycopy(Header.arp_destHdAddr, 0, buf, 18, 6); // 6byte
-		System.arraycopy(Header.arp_destProtoAddr, 0, buf, 24, 4); // 4byte
+		
+		buf[0] = Header.arp_hdType[0];
+		buf[1] = Header.arp_hdType[1];
+		buf[2] = Header.arp_prototype[0];
+		buf[3] = Header.arp_prototype[1];
+		buf[4] = Header.arp_hdLength;
+		buf[5] = Header.arp_protoLength; 
+		buf[6] = Header.arp_op[0];
+		buf[7] = Header.arp_op[1];
+		
+		buf[8] = Header.arp_srcHdAddr.addr[0];
+		buf[9] = Header.arp_srcHdAddr.addr[1];
+		buf[10] = Header.arp_srcHdAddr.addr[2];
+		buf[11] = Header.arp_srcHdAddr.addr[3];
+		buf[12] = Header.arp_srcHdAddr.addr[4];
+		buf[13] = Header.arp_srcHdAddr.addr[5];
+		
+		buf[14] = Header.arp_srcProtoAddr.addr[0];
+		buf[15] = Header.arp_srcProtoAddr.addr[1];
+		buf[16] = Header.arp_srcProtoAddr.addr[2];
+		buf[17] = Header.arp_srcProtoAddr.addr[3];
+		
+		buf[18] = Header.arp_destHdAddr.addr[0];
+		buf[19] = Header.arp_destHdAddr.addr[0];
+		buf[20] = Header.arp_destHdAddr.addr[0];
+		buf[21] = Header.arp_destHdAddr.addr[0];
+		buf[22] = Header.arp_destHdAddr.addr[0];
+		buf[23] = Header.arp_destHdAddr.addr[0];
+		
+		buf[24] = Header.arp_destProtoAddr.addr[0];
+		buf[25] = Header.arp_destProtoAddr.addr[1];
+		buf[26] = Header.arp_destProtoAddr.addr[2];
+		buf[27] = Header.arp_destProtoAddr.addr[3];
 
 		for (int i = 0; i < length; i++)
 			buf[28 + i] = input[i];
@@ -183,24 +271,56 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public synchronized boolean Send(byte[] input, int length) {
-		byte[] bytes = new byte[4];
-
-		// IP HEADER의 src_addr을 byte[] -> String으로 변환 ex) -124,112,113,-35 ->
-		// 132.112.113.221
-		String ar = "";
-		System.arraycopy(input, 12, bytes, 0, 4);
-		for (byte b : bytes) {
-			ar += Integer.toString(b & 0xFF) + ".";
-		}
-		ar = ar.substring(0, ar.length() - 1);
-
-		// src_addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
+		String dst_Addr = getDstAddrFromHeader(input, length);	//IP Header의 dst_Addr 부분을 String으로 변환.
+		
+		// dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
 		_Cache_Entry cache_Entry = new _Cache_Entry(new byte[6], "Incomplete", 10);
-		cache_Table.put(ar, cache_Entry);
-
+		cache_Table.put(dst_Addr, cache_Entry);
+		
 		System.out.println("MAP == " + cache_Table);
 		System.out.println("SIZE == " + cache_Table.size());
+		
+		byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
+		
+			//if Request. 03 12page
+			
+			//if Reply. 03 28page
+			//op코드를 2로 바꾸고
+			//target의 MAC주소를 확보한 상태
+			
+		this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);
 		return false;
+	}
+	
+	//Grat Send
+    public boolean Grat_Send(byte[] input, int length) {
+        
+        // 변경할 MAC주소 받기, Dlg에서 가져오기
+        byte[] mac_bytes = new byte[6];
+        setSrcMAC(mac_bytes);
+        
+        // Target's protocol address 변경, EthernetLayer에서 가져오기
+        byte[] tp_bytes = new byte[6];
+        setDestProtoAddr(tp_bytes);
+        
+        ObjToByte(m_aHeader, null, length); // ARPMessage
+        
+        // 내려보내기
+        this.GetUnderLayer().Send();
+        
+        return true;
+     }
+	
+	// IP HEADER의 dst_addr을 byte[] -> String으로 변환 ex) xxx.xxx.xxx.xxx
+	public String getDstAddrFromHeader(byte[] input, int length) {
+		byte[] bytes = new byte[4];
+		
+		String dst_Addr = "";
+		System.arraycopy(input, 12, bytes, 0, 4);
+		for (byte b : bytes) {
+			dst_Addr += Integer.toString(b & 0xFF) + ".";
+		}
+		return dst_Addr.substring(0, dst_Addr.length() - 1);
 	}
 
 	// 어떻게 basicsend와 proxysend 구분할지?
@@ -415,6 +535,16 @@ public class ARPLayer implements BaseLayer {
 		}
 		return true;
 	}
+	public String extractIPString(byte[] input) {//ARP 데이터구조에서 IP string을 추출
+		byte[] bytes = new byte[4];
+		String ar = "";
+		System.arraycopy(input, 12, bytes, 0, 4);
+		for (byte b : bytes) {
+			ar += Integer.toString(b & 0xFF) + ".";
+		}
+		ar = ar.substring(0, ar.length() - 1);
+		return ar;
+	}
 
 	public boolean Receive(byte[] input) {
 		byte[] data;
@@ -445,6 +575,9 @@ public class ARPLayer implements BaseLayer {
 		}
 
 		else if (isReply(input)) {// ARP reply 인 경우
+			byte[] tableEtherAddr = cache_Table.get(extractIPString(input)).cache_ethaddr;
+			System.arraycopy(input, 0, tableEtherAddr, 0, 6);//cache table update 실행
+			
 			if (isProxyARP(input)) {// proxy ARP reply 인 경우
 				if (Mine) {
 					// then proxy send

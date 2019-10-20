@@ -55,7 +55,7 @@ public class IPLayer implements BaseLayer {
 
 		for (int i = 0; i < 4; i++) {
 			m_iHeader.ip_src.addr[i] = (byte) Integer.parseInt(st.nextToken());
-		}
+		}//인코딩
 	}
 
 	public void setDstAddr(String ip) {

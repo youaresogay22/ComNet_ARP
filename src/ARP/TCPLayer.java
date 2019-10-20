@@ -117,7 +117,7 @@ public class TCPLayer implements BaseLayer {
 		if (pUnderLayer == null)
 			return;
 		this.p_UnderLayer = pUnderLayer;
-	}
+	}//인코딩
 
 	@Override
 	public void SetUpperLayer(BaseLayer pUpperLayer) {

@@ -120,7 +120,7 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 			Thread cacheUpdate = new Thread(task);
 			cacheUpdate.start();
 		}
-	
+	//인코딩
 	public ARPDlg(String pName) {
 		pLayerName = pName;
 
@@ -281,8 +281,12 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 																							// IPLayer의 src 주소 설정
 					try {
 						byteArray = getAddr();
-						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcAddr(byteArray.get(1)); //ARPLayer에 SrcAddr 전달
-						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(byteArray.get(0));  //ARpLayer에 MACAddr 전달
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcProtoAddr(byteArray.get(1)); 	//ARPLayer에 SrcAddr Set
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcHdAddr(byteArray.get(0));  //ARpLayer에 MACAddr Set
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setDestProtoAddr(strToByteArray(TextWrite.getText()));	//ARpLayer에 dstAddr Set
+						
+						
+						((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText());
 					} catch (SocketException e1) {
 						e1.printStackTrace();
 					}
@@ -327,6 +331,16 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 		}
 	}
 	
+	public byte[] strToByteArray(String str) {
+		byte[] bytes = new byte[4];
+		StringTokenizer st = new StringTokenizer(str, ".");
+
+		for (int i = 0; i < 4; i++)
+			bytes[i] = (byte) Integer.parseInt(st.nextToken());
+		
+		return bytes;
+	}
+	
 	//ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수
 		public synchronized static void printCash() {			
 			 for(String key : cache_Itr) { //캐시 테이블을 순회한다.
@@ -347,27 +361,12 @@ public class ARPDlg extends JFrame implements BaseLayer  {
 				byte[] mac = new byte[6];
 				byte[] src_ip = new byte[4];
 				if (networkInterface.getHardwareAddress() != null) {	//loop back Interface가 null이므로, 걸러준다.
-					//byte[]
-					
 					mac = networkInterface.getHardwareAddress();	//MAC주소 받기
 					src_ip= networkInterface.getInetAddresses().nextElement().getAddress();	//IP주소 받기
 					
-					for(int i=0; i<mac.length; i++) {
-						System.out.print(mac[i]+" ");
-					}
-					System.out.println("");
-					
-					for(int j=0; j<src_ip.length; j++) {
-						System.out.print(src_ip[j]+ " ");
-					}
-					System.out.println();
-					
-					
 					byteArray.add(mac);
 					byteArray.add(src_ip);
-					return byteArray;
-
-					//break;	//현재 사용중인 NIC 이외에는 필요 없다. 탈출
+					return byteArray;		// 현재 사용중인 NIC 이외에는 필요 없다. 탈출
 				}
 			}
 		}
