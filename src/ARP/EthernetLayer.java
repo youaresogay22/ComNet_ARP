@@ -78,8 +78,8 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public void SetEnetDstAddress(byte[] input) {
-		System.out.println("header len = " + m_sHeader.enet_dstaddr.addr.length);
-		System.out.println("input len = " + input.length);
+		// 디버깅 System.out.println("header len = " + m_sHeader.enet_dstaddr.addr.length);
+		// 디버깅 System.out.println("input len = " + input.length);
 		for (int i = 0; i < 6; i++) {
 			m_sHeader.enet_dstaddr.addr[i] = input[i];
 		}

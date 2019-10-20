@@ -23,15 +23,20 @@ public class ARPLayer implements BaseLayer {
 	public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
 
 	public class _Cache_Entry {
+		//basic cache
 		byte[] cache_ethaddr;
 		String cache_status;
 		int cache_ttl; // time to live
 
+		//proxy cache
+		String device;
+		
 		public _Cache_Entry(byte[] ethaddr, String status, int ttl) {
 			cache_ethaddr = ethaddr;
 			cache_status = status;
 			cache_ttl = ttl;
 		}
+		
 	}
 
 	private class _IP_ADDR {
@@ -212,14 +217,14 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public synchronized boolean Send(byte[] input, int length) {
-		String dst_Addr = getDstAddrFromHeader(input, length); // IP Header의 dst_Addr 부분을 String으로 변환.
-
+		 // IP Header의 dst_Addr 부분을 String으로 변환.
+		String dst_Addr = getDstAddrFromHeader(input, length);
 		// dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
 		_Cache_Entry cache_Entry = new _Cache_Entry(new byte[6], "Incomplete", 10);
 		cache_Table.put(dst_Addr, cache_Entry);
 
-		System.out.println("MAP == " + cache_Table);
-		System.out.println("SIZE == " + cache_Table.size());
+		System.out.println("Send MAP == " + cache_Table);
+		//System.out.println("SIZE == " + cache_Table.size());
 
 		setARPHeaderBeforeSend(); // opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
 		byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
@@ -276,6 +281,8 @@ public class ARPLayer implements BaseLayer {
 		// setLengthOfHdAddr(6);
 		// setLengthOfProtoAddr(4);
 		setOpCode(1); // request
+		
+		// ***** GUI에서 좌측 Send버튼을 누를 때 set하는 부분이므로, 중복?? dlg에서 setDstMAC 하는 부분은 없다. dlg에 추가하면 될듯?
 		setSrcMAC(MY_MAC_ADDRESS.addr); // 자기 맥주소 가져와서 넣기
 		setSrcIPAddr(MY_IP_ADDRESS.addr); // 자기 ip주소 가져와서 넣기
 		// setDstMac에 00:00:00:00:00:00 넣기
@@ -290,6 +297,8 @@ public class ARPLayer implements BaseLayer {
 			dstIp.addr[i] = input[24 + i];
 		}
 		setDstIPAddr(dstIp.addr);
+		//****
+		
 		byte[] bytes = ObjToByte(m_aHeader, input, length);
 		// 3. ethernet으로 보낸다.
 		this.GetUnderLayer().Send(bytes, length + 28);
@@ -418,7 +427,7 @@ public class ARPLayer implements BaseLayer {
 					for (String ipAddr : my_cache_Itr) {
 						_Cache_Entry cacheEntry = my_cache_Table.get(ipAddr);
 						cacheEntry.cache_ttl--;
-						System.out.println("ARP레이어 테이블:" + cacheEntry.cache_ttl);
+					// 디버깅	System.out.println("ARP레이어 테이블:" + cacheEntry.cache_ttl);
 						if (cacheEntry.cache_ttl < 1) {
 							willRemoved.add(ipAddr);
 						}

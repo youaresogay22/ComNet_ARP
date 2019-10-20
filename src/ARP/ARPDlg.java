@@ -1,3 +1,7 @@
+//1. GUI에서 proxy Add버튼을 통해 Device,IP,MAC을 설정하면 이것들을 cache_Table에 추가해야 한다.
+//2. ARP & Proxy remove
+//3.
+
 package ARP;
 
 import java.awt.Color;
@@ -105,14 +109,11 @@ public class ARPDlg extends JFrame implements BaseLayer {
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
 				}
-				// ARPLayer에서 만든 cache_Table을 가져온다. 2초마다 갱신하는 셈.
-				cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
-				cache_Itr = cache_Table.keySet();
 				///디버깅
-				for (String ipAddr : cache_Itr) {
-					_Cache_Entry cacheEntry = cache_Table.get(ipAddr);
-					System.out.println("UI레이어 테이블:"+cacheEntry.cache_ttl);
-				}
+				//for (String ipAddr : cache_Itr) {
+				//	_Cache_Entry cacheEntry = cache_Table.get(ipAddr);
+				//	System.out.println("UI레이어 테이블:"+cacheEntry.cache_ttl);
+				//}
 				///디버깅
 				printCash(); // GUI에 cache_Table을 print
 			}
@@ -121,8 +122,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		Thread cacheUpdate = new Thread(task);
 		cacheUpdate.start();
 	}
-
-	// 인코딩
 	public ARPDlg(String pName) {
 		pLayerName = pName;
 
@@ -288,13 +287,11 @@ public class ARPDlg extends JFrame implements BaseLayer {
 						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setDstIPAddr(strToByteArray(TextWrite.getText())); // ARpLayer에
 																													// dstAddr
 																													// Set
-
 						((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText());
 						((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(0);
 					} catch (SocketException e1) {
 						e1.printStackTrace();
 					}
-
 					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send("".getBytes(), 0); // Send 시작
 				} else {
 					System.out.println("올바른 IP주소를 입력하시오");
@@ -305,8 +302,10 @@ public class ARPDlg extends JFrame implements BaseLayer {
 				PopupDialog();
 			}
 			if (e.getSource() == Delete_Button) {
-				if (ProxyArea.getSelectedValue() != null)
-					ProxyModel.remove(ProxyArea.getSelectedIndex());
+				if (ProxyArea.getSelectedValue() != null) {
+					//CacheTable에서 지우는 코드도 구현되야 함.
+					ProxyModel.remove(ProxyArea.getSelectedIndex());	//GUI에서 제거함
+				}
 			}
 
 			if (e.getSource() == OK_Button) { // 프록시 리스트에 Item 생성
@@ -315,6 +314,14 @@ public class ARPDlg extends JFrame implements BaseLayer {
 				else {
 					ProxyModel.addElement(String.format("%15s%20s%23s", DeviceComboBox.getSelectedItem(),
 							TextWrite3.getText(), TextWrite4.getText()));
+					
+					System.out.println(DeviceComboBox.getSelectedItem());	//Host 칸에 입력한 텍스트를 가져오기
+					System.out.println(TextWrite3.getText());	//IP 주소칸에 입력한 텍스트를 가져오기
+					System.out.println(TextWrite4.getText());	//Ethernet 주소칸에 입력한 텍스트를 가져오기
+					// ARPLayer에서 만든 cache_Table을 가져온다. 2초마다 갱신하는 셈.
+					cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
+					cache_Itr = cache_Table.keySet();
+					
 					PopUpFrame.dispose();
 				}
 			}
@@ -358,13 +365,60 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	}
 
 	// ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수
+	@SuppressWarnings("unchecked")
 	public synchronized static void printCash() {
-		for (String key : cache_Itr) { // 캐시 테이블을 순회한다.
-			// 캐시 테이블에 있는 값이 ARPModel(GUI)에 존재하지 않으면, GUI에 추가한다.
-			if (!(ARPModel.contains(String.format("%20s%20s%15s", key, "??????????????", "incomplete"))))
-				ARPModel.addElement(String.format("%20s%20s%15s", key, "??????????????", "incomplete"));
+		// ARPLayer에서 만든 cache_Table을 가져온다. Sleep초 마다 갱신하는 셈.
+		cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
+		cache_Itr = cache_Table.keySet();
+		
+		//디버깅
+		System.out.println("CacheTable = " + cache_Table);
+		System.out.println("ARPModel = " + ARPModel);
+		//디버깅
+		for(String key2 : cache_Itr) {
+			System.out.println(key2 + "'s ttl = " + cache_Table.get(key2).cache_ttl);
+		}
+		
+		System.out.println(cache_Table.size() + " is cache's size ///// " + ARPModel.size() + " is ARPModel's size");
+		if (cache_Table.size() != ARPModel.size()) { // 캐시테이블과 ARPModel의 사이즈가 다르면, 갱신한다.
+			System.out.println("different Sizes. I'm gonna refresh.");
+			ARPModel.removeAllElements(); // ARPModel의 값을 모두 지우고,
+			for (String key : cache_Itr) { // 캐시테이블의 모든 값을 ARPModel에 저장하기 위해서 캐시테이블을 순회.
+				ARPModel.addElement(String.format("%20s%20s%15s", // 캐시테이블의 값 중 dstIPAddr(key), dstMACaddr, status를 아래 형식으로 ARPModel에 저장
+						key, 														// key는 String이기 때문에 그대로 저장.
+						ethAddrToQuestionOrEth(cache_Table.get(key).cache_ethaddr), // ethAddr은 byte[]이기 때문에 ??? 혹은 xx:xx 형태의 String으로 변경해서 저장
+						cache_Table.get(key).cache_status));						// status는 String이기 때문에 그대로 저장
+			}
 		}
 	}
+	
+	//byte[]가 0.0.0 이면 ??? String으로 바꿔서 리턴, 0.0.0.이 아니면 정상적인 ethAddr이다. 이 ethAddr을 xx:xx:xx의 String으로 바꿔서 리턴. (GUI에 출력하기 위함)
+	public static String ethAddrToQuestionOrEth(byte[] input) {
+		if(isThisQuestion(input)) { // byte[]가 0000..이다 -> Question mark로 출력
+			return "??????????????";
+		}
+		else {						// byte[]가 정상적인 ethAddr 형식이다 -> String으로 바꿔서 출력.
+			return byteArrayToString(input);
+		}
+	}
+	
+	public static boolean isThisQuestion(byte[] input) {
+		for(byte a : input ) {	//byte[]를 순회하는데
+			if(a != 0) {		// 0 이 아닌 게 있다면,
+				return false;	//  ???가 아니다.
+			}
+		}
+		return true;
+	}
+	public static String byteArrayToString(byte[] b) {	// byte[0] = 1, byte[1] = 2 일 때... 01:02 String으로 변경
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < b.length; ++i) {	
+        	sb.append(String.format("%02d", b[i] ));	// sb에 바이트를 str으로 바꿔서 저장한다. 이 때  1은 01, 2는 02 등 두 글자로 formatting
+            sb.append(":");								
+        }
+        sb.deleteCharAt(sb.length()-1);	// 마지막에 추가된 :를 지운다
+        return sb.toString();
+    }
 
 	public ArrayList<byte[]> getAddr() throws SocketException {
 		Enumeration<NetworkInterface> interfaces = null;
