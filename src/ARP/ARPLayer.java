@@ -16,7 +16,8 @@ public class ARPLayer implements BaseLayer {
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
-	public Map<String, _Cache_Entry> cache_Table = Collections.synchronizedMap(new HashMap<String, _Cache_Entry>());
+	public Map<String, _Cache_Entry> cache_Table =new HashMap<String, _Cache_Entry>();
+	public Map<String, _Proxy_Entry> proxy_Table = new HashMap<String, _Proxy_Entry>();
 	public Set<String> cache_Itr = cache_Table.keySet();
 	private final byte[] OP_ARP_REQUEST = byte4To2(intToByte(1));
 	private final byte[] OP_ARP_REPLY = byte4To2(intToByte(2));
@@ -31,19 +32,28 @@ public class ARPLayer implements BaseLayer {
 		byte[] cache_ethaddr;
 		String cache_status;
 		int cache_ttl; // time to live
-
-		//proxy cache
-		String device;
 		
 		public _Cache_Entry(byte[] ethaddr, String status, int ttl) {
 			cache_ethaddr = ethaddr;
 			cache_status = status;
 			cache_ttl = ttl;
 		}
+	}
+	
+	public class _Proxy_Entry{
+		byte[] proxy_ethaddr;
+		String proxy_device;
+		int proxy_ttl;
 		
+		public _Proxy_Entry(byte[] ethaddr, String status, int ttl) {
+			proxy_ethaddr = ethaddr;
+			proxy_device = status;
+			proxy_ttl = ttl;
+		}
 	}
 
 	private class _IP_ADDR {
+		
 		private byte[] addr = new byte[4];
 
 		public _IP_ADDR() {
@@ -597,7 +607,6 @@ public class ARPLayer implements BaseLayer {
 		for (byte b : bytes) {
 			dst_Addr += Integer.toString(b & 0xFF) + ".";
 		}
-		System.out.println("dstADDR = " + dst_Addr);
 		return dst_Addr.substring(0, dst_Addr.length() - 1);
 	}
 

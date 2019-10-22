@@ -121,11 +121,8 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		cacheUpdate.start();
 	}
 
-	// ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수
-	// Synchronized를 하지 않으면 GUI에 ARPModel을 전부 다 print 하기도 전에 다른 쓰레드가 접근(?)하기 때문에 GUI에 제대로 출력되지 않는 문제가 생긴다.
-	// Synchronized가 있어야 printCash가 작업을 끝마치는 시간을 보장받을 수 있다.
 	@SuppressWarnings("unchecked")
-	public synchronized static void printCash() {
+	public static void printCash() {
 		// ARPLayer에서 만든 cache_Table을 가져온다. Sleep초 마다 갱신하는 셈.
 		cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
 		cache_Itr = cache_Table.keySet();
@@ -493,7 +490,9 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		TextWrite3.setBounds(2, 2, 150, 25);// 249
 		TextInputPanel3.add(TextWrite3);
 		TextWrite3.setHorizontalAlignment(SwingConstants.CENTER);
-		TextWrite3.setColumns(10);// writing area
+		TextWrite3.setColumns(10);
+		TextWrite3.setText("1.1.1.1"); 	//디버깅
+		
 
 		// "Ethernet주소" 라벨과 텍스트 입력 창
 		lblEthernet = new JLabel("Ethernet주소");
@@ -511,6 +510,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		TextInputPanel4.add(TextWrite4);
 		TextWrite4.setHorizontalAlignment(SwingConstants.CENTER);
 		TextWrite4.setColumns(10);// writing area
+		TextWrite4.setText("06:05:04:03:02:01"); 	//디버깅
 
 		// 하단 버튼 두 개
 		OK_Button = new JButton("OK");
