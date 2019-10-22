@@ -34,16 +34,16 @@ public class IPLayer implements BaseLayer {
 		byte[] ip_data; // new (O, IP_DATA_SIZE)
 
 		public _IP_HEADER() {
-			this.ip_verlen = (byte) 0x00;
-			this.ip_tos = (byte) 0x00;
-			this.ip_len = new byte[2];
-			this.ip_id = new byte[2];
-			this.ip_fragoff = new byte[2];
-			this.ip_ttl = (byte) 0x00;
-			this.ip_proto = (byte) 0x00;
-			this.ip_cksum = new byte[2];
-			this.ip_src = new _IP_ADDR();
-			this.ip_dst = new _IP_ADDR();
+			this.ip_verlen = (byte) 0x00; // 0
+			this.ip_tos = (byte) 0x00; // 1
+			this.ip_len = new byte[2]; // 2-3
+			this.ip_id = new byte[2]; // 4-5
+			this.ip_fragoff = new byte[2]; //6-7
+			this.ip_ttl = (byte) 0x00; // 8
+			this.ip_proto = (byte) 0x00; // 9
+			this.ip_cksum = new byte[2]; // 10-11
+			this.ip_src = new _IP_ADDR(); // 12-15
+			this.ip_dst = new _IP_ADDR(); // 16-19
 			this.ip_data = null;
 		}
 	}
