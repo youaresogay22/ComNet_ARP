@@ -18,6 +18,7 @@ import java.util.Enumeration;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.Timer;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -30,6 +31,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.EmptyBorder;
@@ -69,7 +71,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	static DefaultListModel ProxyModel;
 	JFrame PopUpFrame; // 프록시 add버튼 클릭 시 나타나는 팝업 창
 
-	JList ArpArea; // 좌측 ARP 텍스트 출력란
+	static JList ArpArea; // 좌측 ARP 텍스트 출력란
 	JList ProxyArea; // 우측 Proxy 텍스트 출력란
 	JTextArea srcAddress; // 근원지 주소
 	JTextArea dstAddress; // 도착지 주소
@@ -102,26 +104,79 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) )");
 
 		// 2초 마다 printCash()를 호출하여 캐시 테이블과 GUI를 갱신하는 쓰레드
+		
 		Runnable task = () -> {
 			while (true) {
 				try {
-					Thread.sleep(2000);
+					Thread.sleep(3000);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
 				}
-				///디버깅
-				//for (String ipAddr : cache_Itr) {
-				//	_Cache_Entry cacheEntry = cache_Table.get(ipAddr);
-				//	System.out.println("UI레이어 테이블:"+cacheEntry.cache_ttl);
-				//}
-				///디버깅
 				printCash(); // GUI에 cache_Table을 print
 			}
 		};
 		// 위 기능을 수행하는 쓰레드 생성 및 시작.
-		Thread cacheUpdate = new Thread(task);
-		cacheUpdate.start();
+		myWorker mw = new myWorker();
+		mw.execute();
+	//	Thread cacheUpdate = new Thread(task,"cacheUpdataThread");
+	//	cacheUpdate.start();
 	}
+
+	// ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수
+	// Synchronized를 하지 않으면 GUI에 ARPModel을 전부 다 print 하기도 전에 다른 쓰레드가 접근(?)하기 때문에 GUI에 제대로 출력되지 않는 문제가 생긴다.
+	// Synchronized가 있어야 printCash가 작업을 끝마치는 시간을 보장받을 수 있다.
+	@SuppressWarnings("unchecked")
+	public synchronized static void printCash() {
+		// ARPLayer에서 만든 cache_Table을 가져온다. Sleep초 마다 갱신하는 셈.
+		cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
+		cache_Itr = cache_Table.keySet();
+		
+		//디버깅
+		//System.out.println("CacheTable's Thread = " + Thread.currentThread());
+		System.out.println("CacheTable = " + cache_Table);
+		System.out.println("ARPModel = " + ARPModel);
+		//디버깅
+		for(String key2 : cache_Itr) 
+			System.out.println(key2 + "'s ttl = " + cache_Table.get(key2).cache_ttl);
+		
+		if (cache_Table.size() != ARPModel.size()) { // 캐시테이블과 ARPModel의 사이즈가 다르면, 갱신한다.
+			System.out.println(cache_Table.size() + " is cache's size ///// " + ARPModel.size() + " is ARPModel's size "
+					+ "-> different Sizes. I'm gonna refresh.");
+			ARPModel.removeAllElements(); // ARPModel의 값을 모두 지우고,
+			for (String key : cache_Itr) { // 캐시테이블의 모든 값을 ARPModel에 저장하기 위해서 캐시테이블을 순회.
+				ARPModel.addElement(String.format("%20s%20s%15s", // 캐시테이블의 값 중 dstIPAddr(key), dstMACaddr, status를 아래 형식으로 ARPModel에 저장
+						key, 														// key는 String이기 때문에 그대로 저장.
+						ethAddrToQuestionOrEth(cache_Table.get(key).cache_ethaddr), // ethAddr은 byte[]이기 때문에 ??? 혹은 xx:xx 형태의 String으로 변경해서 저장
+						cache_Table.get(key).cache_status));						// status는 String이기 때문에 그대로 저장
+			}
+		//	ArpArea.setModel(ARPModel);
+		//	ArpArea.updateUI();
+		}
+	}
+	
+	public static class myWorker extends SwingWorker{	//argu1 : worker가 일을 끝냈을 때 반환할 타입. argu2 : worker가 정보를 업데이트 하는 데 사용할 타입?
+		@Override
+		public String doInBackground() {
+			while(true) {
+				try {
+					System.out.println("A-YO");
+					Thread.sleep(3000);
+					printCash();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				return "결과값";
+			}
+		}
+		
+		@Override
+		protected void done() {
+			System.out.println("DONE");
+				ArpArea.setModel(ARPModel);
+		}
+	}
+
+
 	public ARPDlg(String pName) {
 		pLayerName = pName;
 
@@ -278,16 +333,11 @@ public class ARPDlg extends JFrame implements BaseLayer {
 			}
 			if (e.getSource() == ARP_Send_Button) {
 				if (isValidIPv4Addr(TextWrite.getText())) { // 올바른 IP주소 형식이 입력되었다면,
-					((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText()); // IPLayer의 dst 주소 설정
-																							// IPLayer의 src 주소 설정
 					try {
-						byteArray = getAddr();
-						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcIPAddr(byteArray.get(1)); // ARPLayer에 SrcAddr Set
+						byteArray = getMyPCAddr();
 						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(byteArray.get(0)); // ARpLayer에 MACAddr Set
-						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setDstIPAddr(strToByteArray(TextWrite.getText())); // ARpLayer에
-																													// dstAddr
-																													// Set
-						((IPLayer) m_LayerMgr.GetLayer("IP")).setDstAddr(TextWrite.getText());
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcIPAddr(byteArray.get(1)); // ARPLayer에 SrcAddr Set
+						((ARPLayer) m_LayerMgr.GetLayer("ARP")).setDstIPAddr(strToByteArray(TextWrite.getText())); // ARpLayer에 dstAddr Set
 						((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(0);
 					} catch (SocketException e1) {
 						e1.printStackTrace();
@@ -364,33 +414,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		return bytes;
 	}
 
-	// ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수
-	@SuppressWarnings("unchecked")
-	public synchronized static void printCash() {
-		// ARPLayer에서 만든 cache_Table을 가져온다. Sleep초 마다 갱신하는 셈.
-		cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
-		cache_Itr = cache_Table.keySet();
-		
-		//디버깅
-		System.out.println("CacheTable = " + cache_Table);
-		System.out.println("ARPModel = " + ARPModel);
-		//디버깅
-		for(String key2 : cache_Itr) {
-			System.out.println(key2 + "'s ttl = " + cache_Table.get(key2).cache_ttl);
-		}
-		
-		System.out.println(cache_Table.size() + " is cache's size ///// " + ARPModel.size() + " is ARPModel's size");
-		if (cache_Table.size() != ARPModel.size()) { // 캐시테이블과 ARPModel의 사이즈가 다르면, 갱신한다.
-			System.out.println("different Sizes. I'm gonna refresh.");
-			ARPModel.removeAllElements(); // ARPModel의 값을 모두 지우고,
-			for (String key : cache_Itr) { // 캐시테이블의 모든 값을 ARPModel에 저장하기 위해서 캐시테이블을 순회.
-				ARPModel.addElement(String.format("%20s%20s%15s", // 캐시테이블의 값 중 dstIPAddr(key), dstMACaddr, status를 아래 형식으로 ARPModel에 저장
-						key, 														// key는 String이기 때문에 그대로 저장.
-						ethAddrToQuestionOrEth(cache_Table.get(key).cache_ethaddr), // ethAddr은 byte[]이기 때문에 ??? 혹은 xx:xx 형태의 String으로 변경해서 저장
-						cache_Table.get(key).cache_status));						// status는 String이기 때문에 그대로 저장
-			}
-		}
-	}
 	
 	//byte[]가 0.0.0 이면 ??? String으로 바꿔서 리턴, 0.0.0.이 아니면 정상적인 ethAddr이다. 이 ethAddr을 xx:xx:xx의 String으로 바꿔서 리턴. (GUI에 출력하기 위함)
 	public static String ethAddrToQuestionOrEth(byte[] input) {
@@ -420,7 +443,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
         return sb.toString();
     }
 
-	public ArrayList<byte[]> getAddr() throws SocketException {
+	public ArrayList<byte[]> getMyPCAddr() throws SocketException {
 		Enumeration<NetworkInterface> interfaces = null;
 		interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
 
@@ -434,8 +457,8 @@ public class ARPDlg extends JFrame implements BaseLayer {
 					mac = networkInterface.getHardwareAddress(); // MAC주소 받기
 					src_ip = networkInterface.getInetAddresses().nextElement().getAddress(); // IP주소 받기
 
-					byteArray.add(mac);
-					byteArray.add(src_ip);
+					byteArray.add(mac);		//byteArray[0] = MAC
+					byteArray.add(src_ip);	//byteArray[1] = IP
 					return byteArray; // 현재 사용중인 NIC 이외에는 필요 없다. 탈출
 				}
 			}
