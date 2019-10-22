@@ -221,12 +221,11 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public synchronized boolean Send(byte[] input, int length) {
-		//캐시테이블이 비어 있다면, IPLayer에서 내려온 Send. -> Send Request Message
-		//1.캐시테이블에 put
-		//2.헤더를 채우고 EthernetLayer로 Send
-		if(cache_Table.isEmpty()) {
-			_IP_ADDR targetIP = getDstIpAddr();							 // ARP 헤더의 dstIPAddr을 가져온다. GUI에서 Send버튼 클릭 시 이미 세팅된 것.
-			String target_IP = targetIP.toString();					 
+		setARPHeaderBeforeSend(); // opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
+		byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
+		
+		if (isTargetHdAddrQuestion(ARP_header_added_bytes)) {	// Target's hardware addr이 ???이면, IP에서 내려온 send. -> send request message.
+			String target_IP = getDstAddrFromHeader(ARP_header_added_bytes);
 			_Cache_Entry cache_Entry = 									 // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
 					new _Cache_Entry(new byte[6], "Incomplete", 10);
 			
@@ -238,15 +237,12 @@ public class ARPLayer implements BaseLayer {
 
 			System.out.println("Send MAP == " + target_IP);	//디버깅
 			
-			setARPHeaderBeforeSend(); // opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
-			byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
-			
 			this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);	//Send Request Message
-		}else { //캐시테이블이 비어 있지 않다면, Receive에서 온 Send. Receive에서 UpdateCache를 통해 Complete된 목록이 있음. -> Send Reply Message
+		}else { //Target's hadrware addr이 xx:xx이면, Receive에서 온 Send. Receive에서 UpdateCache를 통해 Complete된 목록이 있음. -> Send Reply Message
 			if(AreMyPcIPAndPacketIPtheSame(input)) { 					//내 PC의 IP == 패킷의 target IP,
 				for(int i=0; i<6; i++)
 					input[i+18] = myPcAddr.get(0)[i];					//패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
-				byte[] ARP_header_added_bytes = swappingAddr(input);	//src 주소 <-> target 주소 swapping
+				ARP_header_added_bytes = swappingAddr(input);	//src 주소 <-> target 주소 swapping
 				setOpCode(2); 											//setOpcode(2) to reply
 				this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);	//Send Reply Message
 			}else {		//내 PC의 IP 주소 != 패킷의 target IP, 
@@ -256,6 +252,15 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 	
+	public boolean isTargetHdAddrQuestion(byte[] input) {
+		for (int i = 0; i < 6; i++) {
+			if (input[18 + i] == 0)
+				return true;
+			else
+				return false;
+		}
+		return false;
+	}
 	// 내 PC의 IP주소와 Packet의 target IP가 같은지 확인한다
 	public boolean AreMyPcIPAndPacketIPtheSame(byte[] input) {
 		try {
@@ -583,15 +588,16 @@ public class ARPLayer implements BaseLayer {
 		return input;
 	}
 
-	// IP HEADER의 dst_addr을 byte[] -> String으로 변환 ex) xxx.xxx.xxx.xxx
-	public String getDstAddrFromHeader(byte[] input, int length) {
+	// ARP HEADER의 dst_addr을 byte[] -> String으로 변환 ex) xxx.xxx.xxx.xxx
+	public String getDstAddrFromHeader(byte[] input) {
 		byte[] bytes = new byte[4];
 
 		String dst_Addr = "";
-		System.arraycopy(input, 12, bytes, 0, 4);
+		System.arraycopy(input, 24, bytes, 0, 4);
 		for (byte b : bytes) {
 			dst_Addr += Integer.toString(b & 0xFF) + ".";
 		}
+		System.out.println("dstADDR = " + dst_Addr);
 		return dst_Addr.substring(0, dst_Addr.length() - 1);
 	}
 

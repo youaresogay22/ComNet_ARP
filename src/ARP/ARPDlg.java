@@ -104,7 +104,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) )");
 
 		// 2초 마다 printCash()를 호출하여 캐시 테이블과 GUI를 갱신하는 쓰레드
-		
 		Runnable task = () -> {
 			while (true) {
 				try {
@@ -116,10 +115,10 @@ public class ARPDlg extends JFrame implements BaseLayer {
 			}
 		};
 		// 위 기능을 수행하는 쓰레드 생성 및 시작.
-		myWorker mw = new myWorker();
-		mw.execute();
-	//	Thread cacheUpdate = new Thread(task,"cacheUpdataThread");
-	//	cacheUpdate.start();
+	//	myWorker mw = new myWorker();
+	//	mw.execute();
+		Thread cacheUpdate = new Thread(task,"cacheUpdataThread");
+		cacheUpdate.start();
 	}
 
 	// ARPLayer의 cache_Table을 가져와서 GUI에 Print하는 함수
@@ -154,27 +153,19 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		}
 	}
 	
-	public static class myWorker extends SwingWorker{	//argu1 : worker가 일을 끝냈을 때 반환할 타입. argu2 : worker가 정보를 업데이트 하는 데 사용할 타입?
-		@Override
-		public String doInBackground() {
-			while(true) {
-				try {
-					System.out.println("A-YO");
-					Thread.sleep(3000);
-					printCash();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				return "결과값";
-			}
-		}
-		
-		@Override
-		protected void done() {
-			System.out.println("DONE");
-				ArpArea.setModel(ARPModel);
-		}
-	}
+	
+	/*
+	 * public static class myWorker extends SwingWorker{ //argu1 : worker가 일을 끝냈을 때
+	 * 반환할 타입. argu2 : worker가 정보를 업데이트 하는 데 사용할 타입?
+	 * 
+	 * @Override public String doInBackground() { while(true) { try {
+	 * System.out.println("A-YO"); Thread.sleep(3000); printCash(); } catch
+	 * (InterruptedException e) { e.printStackTrace(); } return "결과값"; } }
+	 * 
+	 * @Override protected void done() { System.out.println("DONE");
+	 * ArpArea.setModel(ARPModel); } }
+	 */
+	 
 
 
 	public ARPDlg(String pName) {
