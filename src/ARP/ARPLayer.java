@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import static ARP.EthernetLayer.byte4To2;
+import static ARP.EthernetLayer.intToByte;
 
 public class ARPLayer implements BaseLayer {
 	public int nUpperLayerCount = 0;
@@ -265,6 +267,7 @@ public class ARPLayer implements BaseLayer {
 			} else {// basic ARP request 인 경우
 				if (Mine) {
 					// then basic send
+					Send("".getBytes(), 0);
 					return true;
 				} else
 					return false;
@@ -289,6 +292,7 @@ public class ARPLayer implements BaseLayer {
 			else {// basic ARP reply 인 경우
 				if (Mine) {
 					updateCache(input);
+					Send("".getBytes(), 0);
 					return true;
 				} else
 					return false;
@@ -446,20 +450,8 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	// ★ intToByte, byte4To2 EhternetLayer에서 import.(구글로 못찾겠어서 주석 남겨요 ㅠㅠ)
-	public static byte[] intToByte(int value) {
-		byte[] byteArray = new byte[4];
-		byteArray[0] = (byte) (value >> 24);
-		byteArray[1] = (byte) (value >> 16);
-		byteArray[2] = (byte) (value >> 8);
-		byteArray[3] = (byte) (value);
-		return byteArray;
-	}
-	public static byte[] byte4To2(byte[] fourByte) {
-		byte[] byteArray = new byte[2];
-		byteArray[0] = fourByte[2];
-		byteArray[1] = fourByte[3];
-		return byteArray;
-	}
+	// A. import static ARP.EthernetLayer.byte4To2; 꼴로 import 하시면 됩니다. 
+	// import 해두었습니다.
 
 	// Hadrware type =1
 	// Protocol type = 0x0800
@@ -614,37 +606,44 @@ public class ARPLayer implements BaseLayer {
 	
 	// ★ Q.제가 이해한게 맞다면 이 함수가 receive안에서 쓰이던데
 	// 나에게 온 arp message인지 아닌지 확인하는 역할을 하는 것으로 보여서요. 그렇담 dstIpAddr을 확인해야하는게 아닐까요?
+	// A. 둘다 확인하도록 변경했습니다.
 	private boolean IsItMine(byte[] input) {
 		for (int i = 0; i < 6; i++) {
-			if (m_aHeader.arp_srcHdAddr.addr[i] == input[i + 18])
-				continue;
+			if (MY_MAC_ADDRESS.addr[i] == input[i + 18])
+				continue;//내 맥 주소 = destHdAddr인지 탐색
+			else {
+				return false;
+			}
+		}
+		for (int i = 0; i < 4; i++) {
+			if (MY_IP_ADDRESS.addr[i] == input[i + 24])
+				continue;//내 IP 주소 = destProtoAddr인지 탐색
 			else {
 				return false;
 			}
 		}
 		return true;
 	}
-
-	// public String getDstAddrFromHeader(byte[] input)와 겹침
-	// updateCache함수 안에서 1회 사용됨
-	public String extractIPString(byte[] input) {// ARP 데이터구조에서 IP string을 추출
-		byte[] bytes = new byte[4];
-		String ar = "";
-		System.arraycopy(input, 12, bytes, 0, 4);
-		for (byte b : bytes) {
-			ar += Integer.toString(b & 0xFF) + ".";
-		}
-		ar = ar.substring(0, ar.length() - 1);
-		return ar;
-	}
+	
+	//extractIPString: 삭제했습니다.
 	
 	// ★ updateCache내에서 쓰이는  extractIPString함수를 보면 
 	// input의 12번째부터 가져오시는데 IP layer 헤더에 있는 ip_src부분을 가져오는 것으로 보입니다. 
 	// 그렇다면 ethernet layer로부터 receive한 경우에는 input의 자료구조가 다르므로 (receive한 경우 protoAddr의 위치가 12가 아니어서)
 	// 이 updateCache 함수는 ip layer에서 request를 받은 경우에만 사용할 용도로 만드신거로 이해하면 될까요? 
+	// A. reply 수신 시 동작도 구현하였습니다.
 	public void updateCache(byte[] input) {
-		byte[] tableEtherAddr = cache_Table.get(extractIPString(input)).cache_ethaddr;
-		System.arraycopy(input, 0, tableEtherAddr, 0, 6);// cache table update 실행
+		if (cache_Table.containsKey(getDstAddrFromHeader(input))) {//ip주소가 테이블에 존재하는 경우 == ARP reply 수신 시
+			byte[] tableEtherAddr = cache_Table.get(getDstAddrFromHeader(input)).cache_ethaddr;
+			System.arraycopy(input, 8, tableEtherAddr, 0, 6);// cache table 내부 이더넷 주소만 update
+		} else { //ip주소가 테이블에 존재하지 않는 경우 == ARP request 수신 시
+			String request_ip_string = getDstAddrFromHeader(input);
+			byte[] request_ether_addr = new byte[6];
+			System.arraycopy(input, 8, request_ether_addr, 0, 6);
+			_Cache_Entry request_cache_Entry = new _Cache_Entry(new byte[6], "Complete", 10);
+			
+			cache_Table.put(request_ip_string, request_cache_Entry);
+		}
 	}
 	
 	// opcode getter & setter
