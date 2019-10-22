@@ -11,7 +11,6 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 
-
 public class ARPLayer implements BaseLayer {
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
@@ -32,10 +31,8 @@ public class ARPLayer implements BaseLayer {
 		byte[] cache_ethaddr;
 		String cache_status;
 		int cache_ttl; // time to live
-
-		// proxy cache
-		String device;
-
+		String device; // proxy cache
+		
 		public _Cache_Entry(byte[] ethaddr, String status, int ttl) {
 			cache_ethaddr = ethaddr;
 			cache_status = status;
@@ -406,6 +403,12 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 	
+	
+	// ★ Q. 나의 mac주소와 ip주소를 받아오는 함수로 보입니다.
+	// 코드 25-26줄의 
+	// public final _IP_ADDR MY_IP_ADDRESS = new _IP_ADDR();
+	// public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
+	// 내 ip주소와 mac주소가 자주 쓰이니까 처음에 MY_IP_ADDRESS, MY_MAC_ADDRESS 변수에 각각 담아놓고 가져다 쓰는 건 어떻게 생각하시나요?  
 	public ArrayList<byte[]> getMyPCAddr() throws SocketException {
 		Enumeration<NetworkInterface> interfaces = null;
 		interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
@@ -429,21 +432,21 @@ public class ARPLayer implements BaseLayer {
 		return null;
 	}
 
-//	public static byte[] intToByte(int value) {
-//		byte[] byteArray = new byte[4];
-//		byteArray[0] = (byte) (value >> 24);
-//		byteArray[1] = (byte) (value >> 16);
-//		byteArray[2] = (byte) (value >> 8);
-//		byteArray[3] = (byte) (value);
-//		return byteArray;
-//	}
-
-//	public static byte[] byte4To2(byte[] fourByte) {
-//		byte[] byteArray = new byte[2];
-//		byteArray[0] = fourByte[2];
-//		byteArray[1] = fourByte[3];
-//		return byteArray;
-//	}
+	// ★ intToByte, byte4To2 EhternetLayer에서 import.(구글로 못찾겠어서 주석 남겨요 ㅠㅠ)
+	public static byte[] intToByte(int value) {
+		byte[] byteArray = new byte[4];
+		byteArray[0] = (byte) (value >> 24);
+		byteArray[1] = (byte) (value >> 16);
+		byteArray[2] = (byte) (value >> 8);
+		byteArray[3] = (byte) (value);
+		return byteArray;
+	}
+	public static byte[] byte4To2(byte[] fourByte) {
+		byte[] byteArray = new byte[2];
+		byteArray[0] = fourByte[2];
+		byteArray[1] = fourByte[3];
+		return byteArray;
+	}
 
 	// Hadrware type =1
 	// Protocol type = 0x0800
@@ -454,6 +457,9 @@ public class ARPLayer implements BaseLayer {
 	// Sender's protocol addr = GUI에서 Send버튼을 눌렀을 때 설정
 	// Target's hardware addr = ??? (000)
 	// Target's protocol addr = GUI에서 Send버튼을 눌렀을 때 설정
+	// ★ GUI에서 send버튼을 누를 때  ARPLayer의 헤더를 세팅하는 것으로 이해되는데
+	// 개인적으로 application layer에서 arp layer의 필드를 직접적으로 건들이는게 계층 구조를 무너뜨리는 것 같은 느낌이 듭니다. 
+	// 아니면 구현의 편의를 위해 어쩔 수 없이 쓰고 계시는 건가요?
 	public void setARPHeaderBeforeSend() {
 		this.m_aHeader.arp_hdType[0] = 1;
 		this.m_aHeader.arp_prototype[0] = (byte) 0x0800;
@@ -529,7 +535,7 @@ public class ARPLayer implements BaseLayer {
 		return input;
 	}
 
-	// public String extractIPString(byte[] input)와 겹침
+	// public String extractIPString(byte[] input)와 겹칩니다.
 	// getDstAddrFromHeade send함수 안에서 1회 사용됨
 	// ARP HEADER의 dst_addr을 byte[] -> String으로 변환 ex) xxx.xxx.xxx.xxx
 	public String getDstAddrFromHeader(byte[] input) {
@@ -543,7 +549,6 @@ public class ARPLayer implements BaseLayer {
 		System.out.println("dstADDR = " + dst_Addr);
 		return dst_Addr.substring(0, dst_Addr.length() - 1);
 	}
-
 
 	private boolean isRequest(byte[] input) {
 		for (int i = 0; i < 2; i++) {
@@ -594,8 +599,8 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	
-	// Q.제가 이해한게 맞다면 이 함수가 receive안에서 쓰이던데
-	// 나에게 온 arp message인지 아닌지 확인하는 역할을 하는 것으로 보여서요 그렇담 dstIpAddr을 확인해야하는게 아닐까요?
+	// ★ Q.제가 이해한게 맞다면 이 함수가 receive안에서 쓰이던데
+	// 나에게 온 arp message인지 아닌지 확인하는 역할을 하는 것으로 보여서요. 그렇담 dstIpAddr을 확인해야하는게 아닐까요?
 	private boolean IsItMine(byte[] input) {
 		for (int i = 0; i < 6; i++) {
 			if (m_aHeader.arp_srcHdAddr.addr[i] == input[i + 18])
@@ -607,7 +612,7 @@ public class ARPLayer implements BaseLayer {
 		return true;
 	}
 
-	//public String getDstAddrFromHeader(byte[] input)와 겹침
+	// public String getDstAddrFromHeader(byte[] input)와 겹침
 	// updateCache함수 안에서 1회 사용됨
 	public String extractIPString(byte[] input) {// ARP 데이터구조에서 IP string을 추출
 		byte[] bytes = new byte[4];
@@ -620,6 +625,10 @@ public class ARPLayer implements BaseLayer {
 		return ar;
 	}
 	
+	// ★ updateCache내에서 쓰이는  extractIPString함수를 보면 
+	// input의 12번째부터 가져오시는데 IP layer 헤더에 있는 ip_src부분을 가져오는 것으로 보입니다. 
+	// 그렇다면 ethernet layer로부터 receive한 경우에는 input의 자료구조가 다르므로 (receive한 경우 protoAddr의 위치가 12가 아니어서)
+	// 이 updateCache 함수는 ip layer에서 request를 받은 경우에만 사용할 용도로 만드신거로 이해하면 될까요? 
 	public void updateCache(byte[] input) {
 		byte[] tableEtherAddr = cache_Table.get(extractIPString(input)).cache_ethaddr;
 		System.arraycopy(input, 0, tableEtherAddr, 0, 6);// cache table update 실행
