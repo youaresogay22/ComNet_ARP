@@ -2,12 +2,10 @@ package ARP;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 
@@ -25,7 +23,6 @@ public class ARPLayer implements BaseLayer {
 	private final byte[] PROTOCOL_TYPE_IP = byte4To2(intToByte(0x0800));
 	public final _IP_ADDR MY_IP_ADDRESS = new _IP_ADDR();
 	public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
-	public ArrayList<byte[]> myPcAddr = new ArrayList<byte[]>();
 
 	public class _Cache_Entry {
 		// basic cache
@@ -43,17 +40,14 @@ public class ARPLayer implements BaseLayer {
 	public class _Proxy_Entry{
 		byte[] proxy_ethaddr;
 		String proxy_device;
-		int proxy_ttl;
 		
-		public _Proxy_Entry(byte[] ethaddr, String status, int ttl) {
+		public _Proxy_Entry(byte[] ethaddr, String device) {
 			proxy_ethaddr = ethaddr;
-			proxy_device = status;
-			proxy_ttl = ttl;
+			proxy_device = device;
 		}
 	}
 
 	private class _IP_ADDR {
-		
 		private byte[] addr = new byte[4];
 
 		public _IP_ADDR() {
@@ -103,10 +97,11 @@ public class ARPLayer implements BaseLayer {
 
 	_ARP_HEADER m_aHeader = new _ARP_HEADER();
 
-	public ARPLayer(String pName) {
+	public ARPLayer(String pName) throws SocketException {
 		// super(pName);
 		// TODO Auto-generated constructor stub
 		pLayerName = pName;
+		getMyPCAddr();
 		ResetHeader();
 		run_Clean_Thread(cache_Table, cache_Itr);
 		// 캐시테이블 자동 제거 스레드
@@ -176,9 +171,25 @@ public class ARPLayer implements BaseLayer {
 	public Map<String, _Cache_Entry> getCacheList() {
 		return cache_Table;
 	}
+	
+	public Map<String, _Proxy_Entry> getProxyList() {
+		return proxy_Table;
+	}
+	public void setProxyTable(String key, byte[] ethaddr, String device) {
+		if(!proxy_Table.containsKey(key)) 
+			proxy_Table.put(key,new _Proxy_Entry(ethaddr,device));
+		System.out.println("ProxyTable = " + proxy_Table);			//디버깅
+	}
+	public boolean isProxyTableEmpty() {
+		if(proxy_Table.size() == 0)
+			return true;
+		return false;
+	}
 
-	public synchronized boolean Send(byte[] input, int length) {
-		setARPHeaderBeforeSend(); // // opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
+	public boolean Send(byte[] input, int length) {
+		setARPHeaderBeforeSend();   		// opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
+		setSrcMAC(MY_MAC_ADDRESS.addr);
+		setSrcIPAddr(MY_IP_ADDRESS.addr);
 		byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
 		
 		if (isTargetHdAddrQuestion(ARP_header_added_bytes)) {	// Target's hardware addr이 ???이면, IP에서 내려온 send. -> send request message.
@@ -198,7 +209,7 @@ public class ARPLayer implements BaseLayer {
 		}else {  //Target's hadrware addr이 xx:xx이면, Receive에서 온 Send. Receive에서 UpdateCache를 통해 Complete된 목록이 있음. -> Send Reply Message
 			if(AreMyPcIPAndPacketIPtheSame(input)) { 				//내 PC의 IP == 패킷의 target IP,
 				for(int i=0; i<6; i++)
-					input[i+18] = myPcAddr.get(0)[i];					//패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
+					input[i+18] = MY_MAC_ADDRESS.addr[i];					//패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
 				ARP_header_added_bytes = swappingAddr(input);	//src 주소 <-> target 주소 swapping
 				setOpCode(2); 											//setOpcode(2) to reply
 				this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);	//Send Reply Message
@@ -221,14 +232,8 @@ public class ARPLayer implements BaseLayer {
 	
 	// 내 PC의 IP주소와 Packet의 target IP가 같은지 확인한다
 	public boolean AreMyPcIPAndPacketIPtheSame(byte[] input) {
-		try {
-			myPcAddr = getMyPCAddr();  //내 PC의 주소를 받아온다
-		} catch (SocketException e) {
-			e.printStackTrace();
-		}	
-		
 		for(int i=0; i<4; i++) {
-			if(myPcAddr.get(1)[i] == input[i+24])
+			if(MY_IP_ADDRESS.addr[i] == input[i+24])
 				continue;
 			else
 				return false;
@@ -422,7 +427,7 @@ public class ARPLayer implements BaseLayer {
 	// public final _IP_ADDR MY_IP_ADDRESS = new _IP_ADDR();
 	// public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
 	// 내 ip주소와 mac주소가 자주 쓰이니까 처음에 MY_IP_ADDRESS, MY_MAC_ADDRESS 변수에 각각 담아놓고 가져다 쓰는 건 어떻게 생각하시나요?  
-	public ArrayList<byte[]> getMyPCAddr() throws SocketException {
+	public void getMyPCAddr() throws SocketException {
 		Enumeration<NetworkInterface> interfaces = null;
 		interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
 
@@ -430,19 +435,14 @@ public class ARPLayer implements BaseLayer {
 		while (interfaces.hasMoreElements()) {
 			NetworkInterface networkInterface = interfaces.nextElement();
 			if (networkInterface.isUp()) {
-				byte[] mac = new byte[6];
-				byte[] src_ip = new byte[4];
 				if (networkInterface.getHardwareAddress() != null) {// loop back Interface가 null이므로, 걸러준다.
-					mac = networkInterface.getHardwareAddress(); // MAC주소 받기
-					src_ip = networkInterface.getInetAddresses().nextElement().getAddress(); // IP주소 받기
+					MY_MAC_ADDRESS.addr = networkInterface.getHardwareAddress(); // MAC주소 받기
+					MY_IP_ADDRESS.addr = networkInterface.getInetAddresses().nextElement().getAddress(); // IP주소 받기
 
-					myPcAddr.add(mac);		//byteArray[0] = MAC
-					myPcAddr.add(src_ip);	//byteArray[1] = IP
-					return myPcAddr; // 현재 사용중인 NIC 이외에는 필요 없다. 탈출
+					break; // 현재 사용중인 NIC 이외에는 필요 없다. 반복문 탈출
 				}
 			}
 		}
-		return null;
 	}
 
 	// ★ intToByte, byte4To2 EhternetLayer에서 import.(구글로 못찾겠어서 주석 남겨요 ㅠㅠ)
@@ -470,6 +470,7 @@ public class ARPLayer implements BaseLayer {
 	// Sender's protocol addr = GUI에서 Send버튼을 눌렀을 때 설정
 	// Target's hardware addr = ??? (000)
 	// Target's protocol addr = GUI에서 Send버튼을 눌렀을 때 설정
+	
 	// ★ GUI에서 send버튼을 누를 때  ARPLayer의 헤더를 세팅하는 것으로 이해되는데
 	// 개인적으로 application layer에서 arp layer의 필드를 직접적으로 건들이는게 계층 구조를 무너뜨리는 것 같은 느낌이 듭니다. 
 	// 아니면 구현의 편의를 위해 어쩔 수 없이 쓰고 계시는 건가요?
@@ -510,7 +511,7 @@ public class ARPLayer implements BaseLayer {
 							willRemoved.add(ipAddr);
 						}
 					}
-					Thread.sleep(4000);
+					Thread.sleep(2000);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
