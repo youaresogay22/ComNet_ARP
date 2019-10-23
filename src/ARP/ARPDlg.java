@@ -130,15 +130,13 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		for(String key2 : cache_Itr) 
 			System.out.println(key2 + "'s ttl = " + cache_Table.get(key2).cache_ttl);
 		
-		if (cache_Table.size() != ARPModel.size()) { // 캐시테이블과 ARPModel의 사이즈가 다르면, 갱신한다.
-			System.out.println(cache_Table.size() + " is cache's size ///// " + ARPModel.size() + " is ARPModel's size " + "-> different Sizes. I'm gonna refresh.");
-			ARPModel.removeAllElements(); // ARPModel의 값을 모두 지우고,
-			for (String key : cache_Itr) { // 캐시테이블의 모든 값을 ARPModel에 저장하기 위해서 캐시테이블을 순회.
-				ARPModel.addElement(String.format("%20s%20s%15s", // 캐시테이블의 값 중 dstIPAddr(key), dstMACaddr, status를 아래 형식으로 ARPModel에 저장
-						key, 														// key는 String이기 때문에 그대로 저장.
-						ethAddrToQuestionOrEth(cache_Table.get(key).cache_ethaddr), // ethAddr은 byte[]이기 때문에 ??? 혹은 xx:xx 형태의 String으로 변경해서 저장
-						cache_Table.get(key).cache_status));						// status는 String이기 때문에 그대로 저장
-			}
+		System.out.println(cache_Table.size() + " is cache's size ///// " + ARPModel.size() + " is ARPModel's size " + "-> different Sizes. I'm gonna refresh.");
+		ARPModel.removeAllElements(); // ARPModel의 값을 모두 지우고,
+		for (String key : cache_Itr) { // 캐시테이블의 모든 값을 ARPModel에 저장하기 위해서 캐시테이블을 순회.
+			ARPModel.addElement(String.format("%20s%20s%15s", // 캐시테이블의 값 중 dstIPAddr(key), dstMACaddr, status를 아래 형식으로 ARPModel에 저장
+					key, 														// key는 String이기 때문에 그대로 저장.
+					ethAddrToQuestionOrEth(cache_Table.get(key).cache_ethaddr), // ethAddr은 byte[]이기 때문에 ??? 혹은 xx:xx 형태의 String으로 변경해서 저장
+					cache_Table.get(key).cache_status));						// status는 String이기 때문에 그대로 저장
 		//	ArpArea.setModel(ARPModel);
 		//	ArpArea.updateUI();
 		}
