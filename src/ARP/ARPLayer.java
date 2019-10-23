@@ -301,24 +301,26 @@ public class ARPLayer implements BaseLayer {
 			return false;
 	}
 
-	// Grat Send
-	public boolean Grat_Send(byte[] input, int length) {
+	   // Grat Send
+	   public boolean Grat_Send(byte[] input, int length) {
+	      // ARP헤더 초기 세팅
+	      setARPHeaderBeforeSend();
+	      // Sender's hardware address를 세팅
+	      setSrcMAC(MY_MAC_ADDRESS.addr); // 자기 MAC주소 가져와서 넣기
+	      // Sender's protocol address를 세팅
+	      setSrcIPAddr(MY_IP_ADDRESS.addr); //자기 IP주소 가져와서 넣기
+	      // Target's protocol address를 세팅
+	      setDstIPAddr(MY_IP_ADDRESS.addr); //자기 IP주소 가져와서 넣기
 
-		// Sender's protocol address를 get해서 Target's protocol address에 set하기
-		// Sender's protocol address를 get
-		byte[] tp_bytes = getSrcIPAddr().addr;
-		// Target's protocol address�뿉 set
-		setDstIPAddr(tp_bytes);
+	      // Gratuitous ARP Message 생성
+	      byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
 
-		// Gratuitous ARP Message 생성
-		byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
+	      // Gratuitous ARP Message 내려보내기
+	      this.GetUnderLayer().Send(grat_message, grat_message.length);
 
-		// Gratuitous ARP Message 내려보내기
-		this.GetUnderLayer().Send(grat_message, grat_message.length);
-
-		return true;
-	}
-
+	      return true;
+	   }
+	   
 	// 각 send 함수에서 header를 세팅해서 ObjToByte로 보내주기 때문에 
     // ObjToByte는 이미 set 되어 있는 헤더의 필드 값을 넣어주기만 한다.
     // ∴header setting은 각 send 함수에서 해주어야 함.
