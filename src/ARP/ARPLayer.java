@@ -305,51 +305,33 @@ public class ARPLayer implements BaseLayer {
 			return false;
 	}
 
-<<<<<<< HEAD
 	// Grat Send
-	// ?????
 	public boolean Grat_Send(byte[] input, int length) {
-		// Sender's protocol address를 get해서 Target's protocol address에 set하기
-		// Sender's protocol address를 get
-		byte[] tp_bytes = getSrcIPAddr().addr;
-		// Target's protocol address�뿉 set
-		setDstIPAddr(tp_bytes);
-=======
-	   // Grat Send
-	   public boolean Grat_Send(byte[] input, int length) {
-	      // ARP헤더 초기 세팅
-	      setARPHeaderBeforeSend();
-	      // Sender's hardware address를 세팅
-	      setSrcMAC(MY_MAC_ADDRESS.addr); // 자기 MAC주소 가져와서 넣기
-	      // Sender's protocol address를 세팅
-	      setSrcIPAddr(MY_IP_ADDRESS.addr); //자기 IP주소 가져와서 넣기
-	      // Target's protocol address를 세팅
-	      setDstIPAddr(MY_IP_ADDRESS.addr); //자기 IP주소 가져와서 넣기
+		// ARP헤더 초기 세팅
+		setARPHeaderBeforeSend();
+		// Sender's hardware address를 세팅
+		setSrcMAC(MY_MAC_ADDRESS.addr); // 자기 MAC주소 가져와서 넣기
+		// Sender's protocol address를 세팅
+		setSrcIPAddr(MY_IP_ADDRESS.addr); // 자기 IP주소 가져와서 넣기
+		// Target's protocol address를 세팅
+		setDstIPAddr(MY_IP_ADDRESS.addr); // 자기 IP주소 가져와서 넣기
 
-	      // Gratuitous ARP Message 생성
-	      byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
->>>>>>> branch 'master' of https://github.com/youaresogay22/ComNet_ARP.git
+		// Gratuitous ARP Message 생성
+		byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
 
-	      // Gratuitous ARP Message 내려보내기
-	      this.GetUnderLayer().Send(grat_message, grat_message.length);
+		// Gratuitous ARP Message 내려보내기
+		this.GetUnderLayer().Send(grat_message, grat_message.length);
 
-	      return true;
-	   }
+		return true;
+	}
 
-	// 각 send 함수에서 header를 세팅해서 ObjToByte로 보내주기 때문에 
-    // ObjToByte는 이미 set 되어 있는 헤더의 필드 값을 넣어주기만 한다.
-    // ∴header setting은 각 send 함수에서 해주어야 함.
 	public boolean proxyRQSend(byte[] input, int length) {
 		// 1.ip주소를 cache table에 추가하는 과정
 		// 2. arp message 작성
-		// setHdtype(1);
-		// setProtoType(0x800);
-		// setLengthOfHdAddr(6);
-		// setLengthOfProtoAddr(4);
 		setARPHeaderBeforeSend();
 		setOpCode(1); // request
-		setSrcMAC(MY_MAC_ADDRESS.addr); // // 자기 맥주소 가져와서 넣기
-		setSrcIPAddr(MY_IP_ADDRESS.addr); //자기 ip주소 가져와서 넣기
+		setSrcMAC(MY_MAC_ADDRESS.addr); 
+		setSrcIPAddr(MY_IP_ADDRESS.addr); 
 		// setDstMac에 00:00:00:00:00:00 넣기
 		_ETHERNET_ADDR dstMac = new _ETHERNET_ADDR();
 		for (int i = 0; i < 6; i++) {
@@ -372,11 +354,6 @@ public class ARPLayer implements BaseLayer {
 	public boolean proxyRPSend(byte[] input, int length) {
 		// 1. arp message의 target protocol address가 proxy entry에 있는지 이미 proxyRQReceive에서 확인함.
 		// 2. arp message 작성
-		// setHdtype(1);
-		// setProtoType(0x800);
-		// setLengthOfHdAddr(6);
-		// setLengthOfProtoAddr(4);
-		// target protocol address를 가져온다.
 		setARPHeaderBeforeSend();
 		_IP_ADDR target = new _IP_ADDR();
 		for (int i = 0; i < 4; i++) {
@@ -391,12 +368,6 @@ public class ARPLayer implements BaseLayer {
 		setDstMAC(mac);
 		// ※ 주소 swapping
 		swappingAddr(input);
-//		_IP_ADDR tempIP = m_aHeader.arp_srcProtoAddr;
-//		_ETHERNET_ADDR tempMAC = m_aHeader.arp_srcHdAddr;
-//		m_aHeader.arp_srcProtoAddr = m_aHeader.arp_destProtoAddr;
-//		m_aHeader.arp_srcHdAddr = m_aHeader.arp_destHdAddr;
-//		m_aHeader.arp_destProtoAddr = tempIP;
-//		m_aHeader.arp_destHdAddr = tempMAC;
 		// opcode를 reply(2)로 변경
 		setOpCode(2);
 		byte[] bytes = ObjToByte(m_aHeader, input, length);
@@ -447,13 +418,7 @@ public class ARPLayer implements BaseLayer {
 		}
 		return false;
 	}
-	
-	
-	// ★ Q. 나의 mac주소와 ip주소를 받아오는 함수로 보입니다.
-	// 코드 25-26줄의 
-	// public final _IP_ADDR MY_IP_ADDRESS = new _IP_ADDR();
-	// public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
-	// 내 ip주소와 mac주소가 자주 쓰이니까 처음에 MY_IP_ADDRESS, MY_MAC_ADDRESS 변수에 각각 담아놓고 가져다 쓰는 건 어떻게 생각하시나요?  
+	 
 	public void getMyPCAddr() throws SocketException {
 		Enumeration<NetworkInterface> interfaces = null;
 		interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
@@ -472,23 +437,6 @@ public class ARPLayer implements BaseLayer {
 		}
 	}
 
-	// ★ intToByte, byte4To2 EhternetLayer에서 import.(구글로 못찾겠어서 주석 남겨요 ㅠㅠ)
-	// A. import static ARP.EthernetLayer.byte4To2; 꼴로 import 하시면 됩니다. 
-	// import 해두었습니다.
-
-	// Hadrware type =1
-	// Protocol type = 0x0800
-	// Length of hardware address = 6
-	// Length of protool address = 4
-	// OP Code = 1
-	// Seder's hardware addr = GUI에서 Send버튼을 눌렀을 때 설정
-	// Sender's protocol addr = GUI에서 Send버튼을 눌렀을 때 설정
-	// Target's hardware addr = ??? (000)
-	// Target's protocol addr = GUI에서 Send버튼을 눌렀을 때 설정
-	
-	// ★ GUI에서 send버튼을 누를 때  ARPLayer의 헤더를 세팅하는 것으로 이해되는데
-	// 개인적으로 application layer에서 arp layer의 필드를 직접적으로 건들이는게 계층 구조를 무너뜨리는 것 같은 느낌이 듭니다. 
-	// 아니면 구현의 편의를 위해 어쩔 수 없이 쓰고 계시는 건가요?
 	public void setARPHeaderBeforeSend() {
 		this.m_aHeader.arp_hdType[0] = 1;
 		this.m_aHeader.arp_prototype[0] = (byte) 0x0800;
@@ -541,8 +489,6 @@ public class ARPLayer implements BaseLayer {
 		thread.start();
 		return true;
 	}
-	
-	// setRequest, setReply 사용하지 않아서 삭제 했습니다.
 
 	public byte[] swappingAddr(byte[] input) {
 		byte[] tempMACAddr = new byte[6];
@@ -563,9 +509,7 @@ public class ARPLayer implements BaseLayer {
 		}
 		return input;
 	}
-
-	// public String extractIPString(byte[] input)와 겹칩니다.
-	// getDstAddrFromHeade send함수 안에서 1회 사용됨
+	
 	// ARP HEADER의 dst_addr을 byte[] -> String으로 변환 ex) xxx.xxx.xxx.xxx
 	public String getDstAddrFromHeader(byte[] input) {
 		byte[] bytes = new byte[4];
@@ -626,10 +570,6 @@ public class ARPLayer implements BaseLayer {
 		return true;
 	}
 
-	
-	// ★ Q.제가 이해한게 맞다면 이 함수가 receive안에서 쓰이던데
-	// 나에게 온 arp message인지 아닌지 확인하는 역할을 하는 것으로 보여서요. 그렇담 dstIpAddr을 확인해야하는게 아닐까요?
-	// A. 둘다 확인하도록 변경했습니다.
 	private boolean IsItMine(byte[] input) {
 		for (int i = 0; i < 6; i++) {
 			if (MY_MAC_ADDRESS.addr[i] == input[i + 18])
@@ -647,14 +587,7 @@ public class ARPLayer implements BaseLayer {
 		}
 		return true;
 	}
-	
-	//extractIPString: 삭제했습니다.
-	
-	// ★ updateCache내에서 쓰이는  extractIPString함수를 보면 
-	// input의 12번째부터 가져오시는데 IP layer 헤더에 있는 ip_src부분을 가져오는 것으로 보입니다. 
-	// 그렇다면 ethernet layer로부터 receive한 경우에는 input의 자료구조가 다르므로 (receive한 경우 protoAddr의 위치가 12가 아니어서)
-	// 이 updateCache 함수는 ip layer에서 request를 받은 경우에만 사용할 용도로 만드신거로 이해하면 될까요? 
-	// A. reply 수신 시 동작도 구현하였습니다.
+
 	public void updateCache(byte[] input) {
 		if (cache_Table.containsKey(getDstAddrFromHeader(input))) {// ip주소가 테이블에 존재하는 경우 == ARP reply 수신 시
 			_Cache_Entry tableToUpdate = cache_Table.get(getDstAddrFromHeader(input));
