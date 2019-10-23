@@ -239,7 +239,8 @@ public class EthernetLayer implements BaseLayer {
 		// ARP 과제 추가 사항:
 		if (IsItARP(input)) {// ARP이고
 			Mine = IsItMine(input);
-			if (Mine == true) {// 수신자가 나이면
+			Broadcast = IsItBroadcast(input);
+			if (Mine == true || Broadcast == true) {// 수신자가 나이거나 broadcast이면
 				data = RemoveEtherHeader(input, input.length);
 				this.GetUpperLayer(0).Receive(data);// receive하고 ARP layer로 올려보냄 . upperlayer(0)이 맞나요?
 				return true;

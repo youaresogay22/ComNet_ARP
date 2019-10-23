@@ -443,7 +443,8 @@ public class ARPLayer implements BaseLayer {
 		this.m_aHeader.arp_prototype[1] = (byte) 0x00;
 		this.m_aHeader.arp_hdLength = 6;
 		this.m_aHeader.arp_protoLength = 4;
-		this.m_aHeader.arp_op[0] = 1;
+		this.m_aHeader.arp_op[1] = 1;
+		
 	}
 
 	private class tableCleanThread implements Runnable {
