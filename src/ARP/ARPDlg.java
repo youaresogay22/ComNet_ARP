@@ -367,6 +367,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 			// Grat 이벤트
 			if (e.getSource() == Grat_Send_Button) {
 				((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(strToByteArray2(TextWrite2.getText()));
+				((TCPLayer) m_LayerMgr.GetLayer("TCP")).GratSend("".getBytes(), 0); // Send 시작
 			}
 			// 하단 버튼 이벤트
 			if (e.getSource() == Bottom_Exit_Button) {

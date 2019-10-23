@@ -45,4 +45,8 @@ interface BaseLayer {
 		return false;
 	}
 
+	public default boolean GratSend(byte[] tCP_header_added_bytes, int length) {
+		return false;
+	}
+
 }

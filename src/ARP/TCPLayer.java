@@ -91,10 +91,16 @@ public class TCPLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
-		//send 내에 구현사항을 많이 넣으면 가독성이 떨어져서 ObjToByte로 분리했습니다.
 		byte[] TCP_header_added_bytes = ObjToByte(m_tHeader, input, length);
 
 		this.GetUnderLayer().Send(TCP_header_added_bytes, TCP_header_added_bytes.length);
+		return false;
+	}
+	
+	public boolean GratSend(byte[] input, int length) {
+		byte[] TCP_header_added_bytes = ObjToByte(m_tHeader, input, length);
+
+		this.GetUnderLayer().GratSend(TCP_header_added_bytes, TCP_header_added_bytes.length);
 		return false;
 	}
 
