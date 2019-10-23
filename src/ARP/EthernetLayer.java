@@ -15,7 +15,8 @@ public class EthernetLayer implements BaseLayer {
 	private final static byte[] enetType_FILE = byte4To2(intToByte(0x2090));
 	private final static byte[] enetType_ARP = byte4To2(intToByte(0x0806));
 	private final static byte[] enetType_IP = byte4To2(intToByte(0x0800));
-	private final static byte[] broadcastAddr = { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF };
+	private final static byte[] broadcastAddr = { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+			(byte) 0xFF };
 
 	private class _ETHERNET_ADDR {
 		private byte[] addr = new byte[6];
@@ -127,7 +128,7 @@ public class EthernetLayer implements BaseLayer {
 	public boolean Send(byte[] input, int length) {
 		setEtherHeader(input);
 		byte[] bytes = ObjToByte(m_sHeader, input, length);
-		
+
 		this.GetUnderLayer().Send(bytes, length + 14);
 		return false;
 	}
@@ -136,15 +137,23 @@ public class EthernetLayer implements BaseLayer {
 		byte[] my_dstAddress = new byte[6];
 		byte[] my_srcAddress = new byte[6];
 		byte[] my_enetType = new byte[2];
-		
-		if(needToBroadCast(input)) {
+
+		// my_dstAddress 세팅
+		if (needToBroadCast(input)) {
 			System.arraycopy(broadcastAddr, 0, my_dstAddress, 0, 6);
-		} else 
+		} else {
 			System.arraycopy(input, 18, my_dstAddress, 0, 6);
-		
-		System.arraycopy(input, 8, my_srcAddress, 0, 6);
+		}
+		// my_srcAddress 세팅
+		// Gratuitous ARP일 경우, 변경 전 MAC주소 세팅
+		if (isGratuitousARP(input)) {
+			my_srcAddress = GetEnetSrcAddress().addr;
+		} else {
+			System.arraycopy(input, 8, my_srcAddress, 0, 6);
+		}
+		// my_enetType 세팅
 		System.arraycopy(enetType_ARP, 0, my_enetType, 0, 2);
-		
+
 		SetEnetDstAddress(my_dstAddress);
 		SetEnetSrcAddress(my_srcAddress);
 		SetEnetType(my_enetType);
@@ -214,6 +223,18 @@ public class EthernetLayer implements BaseLayer {
 			return true;
 		} else
 			return false;
+	}
+
+	// Gratuitous ARP인지 확인합니다.
+	public boolean isGratuitousARP(byte[] input) {
+		for (int i = 0; i < 6; i++) {
+			if (input[i + 14] == input[i + 24])
+				continue;
+			else {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public boolean Receive(byte[] input) {
