@@ -297,26 +297,24 @@ public class ARPLayer implements BaseLayer {
 			return false;
 	}
 
-	   // Grat Send
-	   public boolean Grat_Send(byte[] input, int length) {
-	      // ARP헤더 초기 세팅
-	      setARPHeaderBeforeSend();
-	      // Sender's hardware address를 세팅
-	      setSrcMAC(MY_MAC_ADDRESS.addr); // 자기 MAC주소 가져와서 넣기
-	      // Sender's protocol address를 세팅
-	      setSrcIPAddr(MY_IP_ADDRESS.addr); //자기 IP주소 가져와서 넣기
-	      // Target's protocol address를 세팅
-	      setDstIPAddr(MY_IP_ADDRESS.addr); //자기 IP주소 가져와서 넣기
+	// Grat Send
+	public boolean Grat_Send(byte[] input, int length) {
 
-	      // Gratuitous ARP Message 생성
-	      byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
+		// Sender's protocol address를 get해서 Target's protocol address에 set하기
+		// Sender's protocol address를 get
+		byte[] tp_bytes = getSrcIPAddr().addr;
+		// Target's protocol address�뿉 set
+		setDstIPAddr(tp_bytes);
 
-	      // Gratuitous ARP Message 내려보내기
-	      this.GetUnderLayer().Send(grat_message, grat_message.length);
+		// Gratuitous ARP Message 생성
+		byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
 
-	      return true;
-	   }
-	   
+		// Gratuitous ARP Message 내려보내기
+		this.GetUnderLayer().Send(grat_message, grat_message.length);
+
+		return true;
+	}
+
 	// 각 send 함수에서 header를 세팅해서 ObjToByte로 보내주기 때문에 
     // ObjToByte는 이미 set 되어 있는 헤더의 필드 값을 넣어주기만 한다.
     // ∴header setting은 각 send 함수에서 해주어야 함.
@@ -637,15 +635,19 @@ public class ARPLayer implements BaseLayer {
 	// 이 updateCache 함수는 ip layer에서 request를 받은 경우에만 사용할 용도로 만드신거로 이해하면 될까요? 
 	// A. reply 수신 시 동작도 구현하였습니다.
 	public void updateCache(byte[] input) {
-		if (cache_Table.containsKey(getDstAddrFromHeader(input))) {//ip주소가 테이블에 존재하는 경우 == ARP reply 수신 시
-			byte[] tableEtherAddr = cache_Table.get(getDstAddrFromHeader(input)).cache_ethaddr;
-			System.arraycopy(input, 8, tableEtherAddr, 0, 6);// cache table 내부 이더넷 주소만 update
-		} else { //ip주소가 테이블에 존재하지 않는 경우 == ARP request 수신 시
+		if (cache_Table.containsKey(getDstAddrFromHeader(input))) {// ip주소가 테이블에 존재하는 경우 == ARP reply 수신 시
+			_Cache_Entry tableToUpdate = cache_Table.get(getDstAddrFromHeader(input));
+			
+			System.arraycopy(input, 8, tableToUpdate.cache_ethaddr, 0, 6);// cache table 내부 이더넷 주소 update
+			tableToUpdate.cache_status = "Complete";// 테이블 내부 상태 변경
+			tableToUpdate.cache_ttl = 20; // complete인 경우 ttl = 20
+			
+		} else { // ip주소가 테이블에 존재하지 않는 경우 == ARP request 수신 시
 			String request_ip_string = getDstAddrFromHeader(input);
 			byte[] request_ether_addr = new byte[6];
 			System.arraycopy(input, 8, request_ether_addr, 0, 6);
-			_Cache_Entry request_cache_Entry = new _Cache_Entry(new byte[6], "Complete", 10);
-			
+			_Cache_Entry request_cache_Entry = new _Cache_Entry(new byte[6], "Complete", 20);// complete인 경우 ttl = 20
+
 			cache_Table.put(request_ip_string, request_cache_Entry);
 		}
 	}
