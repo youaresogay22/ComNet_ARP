@@ -110,7 +110,7 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public void ResetHeader() {
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 6; i++) {
 			m_aHeader.arp_srcHdAddr.addr[i] = (byte) 0x00;
 			m_aHeader.arp_destHdAddr.addr[i] = (byte) 0x00;
 		}
@@ -257,12 +257,9 @@ public class ARPLayer implements BaseLayer {
 					return false;
 
 			} else if (isGratuitousARP(input)) {// Gratuitous ARP request  인 경우
-				if (Mine) {// then Gratuitous send
-					// do nothing, cache table update
+
 					updateCache(input);
 					return true;
-				} else
-					return false;
 
 			} else {// basic ARP request 인 경우
 				if (Mine) {
@@ -292,7 +289,6 @@ public class ARPLayer implements BaseLayer {
 			else {// basic ARP reply 인 경우
 				if (Mine) {
 					updateCache(input);
-					Send("".getBytes(), 0);
 					return true;
 				} else
 					return false;
@@ -367,16 +363,17 @@ public class ARPLayer implements BaseLayer {
 		String tIpAddr = target.toString();
 		// 찾은 ip주소로 target hardware address를 가져온다.
 		// mac에는 target hardware address가 들어있다.
-		byte[] mac = cache_Table.get(tIpAddr).cache_ethaddr;
+		byte[] mac = proxy_Table.get(tIpAddr).proxy_ethaddr;
 		// header의 target hardware address에 알아낸 맥주소를 넣는다.
 		setDstMAC(mac);
-		// 주소 swapping
-		_IP_ADDR tempIP = m_aHeader.arp_srcProtoAddr;
-		_ETHERNET_ADDR tempMAC = m_aHeader.arp_srcHdAddr;
-		m_aHeader.arp_srcProtoAddr = m_aHeader.arp_destProtoAddr;
-		m_aHeader.arp_srcHdAddr = m_aHeader.arp_destHdAddr;
-		m_aHeader.arp_destProtoAddr = tempIP;
-		m_aHeader.arp_destHdAddr = tempMAC;
+		// ※ 주소 swapping
+		swappingAddr(input);
+//		_IP_ADDR tempIP = m_aHeader.arp_srcProtoAddr;
+//		_ETHERNET_ADDR tempMAC = m_aHeader.arp_srcHdAddr;
+//		m_aHeader.arp_srcProtoAddr = m_aHeader.arp_destProtoAddr;
+//		m_aHeader.arp_srcHdAddr = m_aHeader.arp_destHdAddr;
+//		m_aHeader.arp_destProtoAddr = tempIP;
+//		m_aHeader.arp_destHdAddr = tempMAC;
 		// opcode를 reply(2)로 변경
 		setOpCode(2);
 		byte[] bytes = ObjToByte(m_aHeader, input, length);
@@ -386,18 +383,21 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean proxyRQReceive(byte[] input, int length) {
 		// 1. arp cache table 업데이트
-		_Cache_Entry newEntry = new _Cache_Entry(m_aHeader.arp_srcHdAddr.addr, "Complete", 12);
-		cache_Table.put(m_aHeader.arp_srcProtoAddr.toString(), newEntry);
+		//_Cache_Entry newEntry = new _Cache_Entry(m_aHeader.arp_srcHdAddr.addr, "Complete", 12);
+		//cache_Table.put(m_aHeader.arp_srcProtoAddr.toString(), newEntry);
+		// ※ 수정 proxy table에 업데이트 
+		_Proxy_Entry newEntry = new _Proxy_Entry(m_aHeader.arp_srcHdAddr.addr, "HOST NAME");
+		proxy_Table.put(m_aHeader.arp_srcProtoAddr.addr.toString(), newEntry);
 		// 2. target protocol address가 cache table에 있는지 확인
 		// 헤더의 target protocol address를 가져온다.
 		_IP_ADDR target =new _IP_ADDR();
 		for(int i = 0; i < 4; i++) {
 			target.addr[i] = input[i+24];
 		}
-		// cache table에서 찾기 위해 target protocol address를 string으로 변환
-		String tIpAddr = target.toString();
-		// cache_Table에 target proto addr이 존재하면 proxy reply send
-		if (cache_Table.containsKey(tIpAddr) == true) {
+		// proxy table에서 찾기 위해 target protocol address를 string으로 변환
+		String tIpAddr = target.addr.toString();
+		//proxy table에 target proto addr이 존재하면 proxy reply send
+		if (proxy_Table.containsKey(tIpAddr) == true) {
 			proxyRPSend(input, length);
 			return true;
 		}
