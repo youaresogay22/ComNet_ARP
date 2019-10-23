@@ -327,6 +327,7 @@ public class ARPLayer implements BaseLayer {
 		// setProtoType(0x800);
 		// setLengthOfHdAddr(6);
 		// setLengthOfProtoAddr(4);
+		setARPHeaderBeforeSend();
 		setOpCode(1); // request
 		setSrcMAC(MY_MAC_ADDRESS.addr); // // 자기 맥주소 가져와서 넣기
 		setSrcIPAddr(MY_IP_ADDRESS.addr); //자기 ip주소 가져와서 넣기
@@ -357,12 +358,13 @@ public class ARPLayer implements BaseLayer {
 		// setLengthOfHdAddr(6);
 		// setLengthOfProtoAddr(4);
 		// target protocol address를 가져온다.
+		setARPHeaderBeforeSend();
 		_IP_ADDR target = new _IP_ADDR();
 		for (int i = 0; i < 4; i++) {
 			target.addr[i] = input[i + 24];
 		}
 		// cache table에서 찾기 위해 target protocol address를 string으로 변환
-		String tIpAddr = target.toString();
+		String tIpAddr = target.addr.toString();
 		// 찾은 ip주소로 target hardware address를 가져온다.
 		// mac에는 target hardware address가 들어있다.
 		byte[] mac = proxy_Table.get(tIpAddr).proxy_ethaddr;
@@ -387,7 +389,7 @@ public class ARPLayer implements BaseLayer {
 		// 1. arp cache table 업데이트
 		//_Cache_Entry newEntry = new _Cache_Entry(m_aHeader.arp_srcHdAddr.addr, "Complete", 12);
 		//cache_Table.put(m_aHeader.arp_srcProtoAddr.toString(), newEntry);
-		// ※ 수정 proxy table에 업데이트 
+		// ※ 수정 proxy table에 업데이트
 		_Proxy_Entry newEntry = new _Proxy_Entry(m_aHeader.arp_srcHdAddr.addr, "HOST NAME");
 		proxy_Table.put(m_aHeader.arp_srcProtoAddr.addr.toString(), newEntry);
 		// 2. target protocol address가 cache table에 있는지 확인
