@@ -189,6 +189,7 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
+		System.out.println("ARP/BASIC SEND IN");
 		setARPHeaderBeforeSend();   		// opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
 		setSrcMAC(MY_MAC_ADDRESS.addr);
 		setSrcIPAddr(MY_IP_ADDRESS.addr);
@@ -220,6 +221,7 @@ public class ARPLayer implements BaseLayer {
 		}
 		return false;
 	}
+	
 	
 	public boolean isTargetHdAddrQuestion(byte[] input) {
 		for (int i = 0; i < 6; i++) {
@@ -306,7 +308,8 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	// Grat Send
-	public boolean Grat_Send(byte[] input, int length) {
+	public boolean GratSend(byte[] input, int length) {
+		System.out.println("GRAT SEND IN");
 		// ARP헤더 초기 세팅
 		setARPHeaderBeforeSend();
 		// Sender's hardware address를 세팅

@@ -131,6 +131,7 @@ public class EthernetLayer implements BaseLayer {
 		this.GetUnderLayer().Send(bytes, length + 14);
 		return false;
 	}
+		
 
 	public void setEtherHeader(byte[] input) {
 		byte[] my_dstAddress = new byte[6];

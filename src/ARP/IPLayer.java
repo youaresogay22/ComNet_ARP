@@ -119,6 +119,12 @@ public class IPLayer implements BaseLayer {
 		this.GetUnderLayer().Send(IP_header_added_bytes, IP_header_added_bytes.length);
 		return false;
 	}
+	public boolean GratSend(byte[] input, int length) {
+		byte[] TCP_header_added_bytes = ObjToByte(m_iHeader, input, length);
+
+		this.GetUnderLayer().GratSend(TCP_header_added_bytes, TCP_header_added_bytes.length);
+		return false;
+	}
 
 	public boolean Send(String filename) {
 		return false;
