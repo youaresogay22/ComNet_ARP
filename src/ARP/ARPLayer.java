@@ -574,7 +574,7 @@ public class ARPLayer implements BaseLayer {
 		// 나의 IP를 가져온다
 		_IP_ADDR myIp = new _IP_ADDR();
 		_IP_ADDR target = new _IP_ADDR();
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < 4; i++) {
 			target.addr[i] = input[i + 24];
 		}// ※ target.addr -> target.addr.toString()
 		if (!Arrays.equals(myIp.addr, target.addr) && cache_Table.containsKey(target.addr.toString()) == true) {
