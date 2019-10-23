@@ -110,7 +110,7 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public void ResetHeader() {
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 6; i++) {
 			m_aHeader.arp_srcHdAddr.addr[i] = (byte) 0x00;
 			m_aHeader.arp_destHdAddr.addr[i] = (byte) 0x00;
 		}
@@ -257,12 +257,9 @@ public class ARPLayer implements BaseLayer {
 					return false;
 
 			} else if (isGratuitousARP(input)) {// Gratuitous ARP request  인 경우
-				if (Mine) {// then Gratuitous send
-					// do nothing, cache table update
+
 					updateCache(input);
 					return true;
-				} else
-					return false;
 
 			} else {// basic ARP request 인 경우
 				if (Mine) {
@@ -292,7 +289,6 @@ public class ARPLayer implements BaseLayer {
 			else {// basic ARP reply 인 경우
 				if (Mine) {
 					updateCache(input);
-					Send("".getBytes(), 0);
 					return true;
 				} else
 					return false;
