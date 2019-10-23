@@ -391,13 +391,14 @@ public class ARPDlg extends JFrame implements BaseLayer {
 
 	// MAC
 	public byte[] strToByteArray2(String str) {
-		byte[] bytes = new byte[6];
-		StringTokenizer st = new StringTokenizer(str, ":");
+		byte[] byteMACAddr = new byte[6];
+		String[] byte_dst = str.split(":");
+		
+		for (int i = 0; i < 6; i++) {
+			byteMACAddr[i] = (byte) Integer.parseInt(byte_dst[i], 16);
+		}
 
-		for (int i = 0; i < 6; i++)
-			bytes[i] = (byte) Integer.parseInt(st.nextToken());
-
-		return bytes;
+		return byteMACAddr;
 	}
 
 	
