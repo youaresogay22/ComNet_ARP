@@ -256,8 +256,27 @@ public class ARPLayer implements BaseLayer {
 		}
 	}
 	
+	private boolean IsItIncomplete(byte[] input) {
+		for (int i = 0; i < 6; i++) {
+			if (input[i + 18] == 0x00)
+				continue;// 내 맥 주소 = destHdAddr인지 탐색
+			else {
+				return false;
+			}
+		}
+		for (int i = 0; i < 4; i++) {
+			if (MY_IP_ADDRESS.addr[i] == input[i + 24])
+				continue;// 내 IP 주소 = destProtoAddr인지 탐색
+			else {
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	public boolean Receive(byte[] input) {
 		boolean Mine = IsItMine(input);
+		boolean Incomplete = IsItIncomplete(input);
 		boolean proxyMine = IsItProxyMine(input);
 		if (isRequest(input)) {// ARP request 인 경우
 			if (isProxyARP(input)) {// proxy ARP request 인 경우
@@ -273,7 +292,7 @@ public class ARPLayer implements BaseLayer {
 					updateCache(input);
 					return true;
 			} else {// basic ARP request 인 경우
-				if (Mine) {
+				if (Mine || Incomplete) {
 					// then basic send
 					Send("".getBytes(), 0);
 					return true;
