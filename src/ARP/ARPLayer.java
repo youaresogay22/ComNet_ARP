@@ -198,7 +198,6 @@ public class ARPLayer implements BaseLayer {
 			String target_IP = getDstAddrFromHeader(ARP_header_added_bytes);
 			_Cache_Entry cache_Entry = 									 // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
 					new _Cache_Entry(new byte[6], "Incomplete", 10);
-			
 			//Map의 put 메소드는 기본적으로 put의 인자로 전달받은 key(new)가 이전의 key(old)를 replace하게끔 구현되어 있다.
 			//따라서 1.1.1.1을 Map에 put한 다음에, 1.1.1.1이 ttl로 삭제되기 이전에 1.1.1.1을 다시 Map에 put하면은, ttl이 초기화된다.
 			//아래 if문은 new key가 old key를 대체하지 않게끔 중복체크하여 ttl이 초기화되는 일을 방지함.
@@ -243,12 +242,24 @@ public class ARPLayer implements BaseLayer {
 		return true;
 	}
 	
+	public boolean IsItProxyMine(byte[] input) {
+		_IP_ADDR newIP = new _IP_ADDR();
+		for(int i = 0; i < 4; i++) {
+			newIP.addr[i] = input[i + 24];
+		}
+		if(proxy_Table.containsKey(newIP.addr.toString()) == true) {
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
 	public boolean Receive(byte[] input) {
 		boolean Mine = IsItMine(input);
-
+		boolean proxyMine = IsItProxyMine(input);
 		if (isRequest(input)) {// ARP request 인 경우
 			if (isProxyARP(input)) {// proxy ARP request 인 경우
-				if (Mine) {// then proxy send
+				if (proxyMine) {// then proxy send
 					proxyRQReceive(input, input.length);
 					updateCache(input);
 					proxyRPSend(input, input.length);
@@ -257,10 +268,8 @@ public class ARPLayer implements BaseLayer {
 					return false;
 
 			} else if (isGratuitousARP(input)) {// Gratuitous ARP request  인 경우
-
 					updateCache(input);
 					return true;
-
 			} else {// basic ARP request 인 경우
 				if (Mine) {
 					// then basic send
@@ -270,7 +279,6 @@ public class ARPLayer implements BaseLayer {
 					return false;
 			}
 		} else if (isReply(input)) {// ARP reply 인 경우
-
 			if (isProxyARP(input)) {// proxy ARP reply 인 경우
 				if (Mine) {// then proxy send
 					updateCache(input);
@@ -298,8 +306,8 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	// Grat Send
+	// ?????
 	public boolean Grat_Send(byte[] input, int length) {
-
 		// Sender's protocol address를 get해서 Target's protocol address에 set하기
 		// Sender's protocol address를 get
 		byte[] tp_bytes = getSrcIPAddr().addr;
@@ -587,8 +595,8 @@ public class ARPLayer implements BaseLayer {
 		_IP_ADDR target = new _IP_ADDR();
 		for (int i = 0; i < 6; i++) {
 			target.addr[i] = input[i + 24];
-		}
-		if (!Arrays.equals(myIp.addr, target.addr) && cache_Table.containsKey(target.addr) == true) {
+		}// ※ target.addr -> target.addr.toString()
+		if (!Arrays.equals(myIp.addr, target.addr) && cache_Table.containsKey(target.addr.toString()) == true) {
 			return true;
 		}
 		return false;
