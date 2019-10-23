@@ -438,8 +438,9 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public void setARPHeaderBeforeSend() {
-		this.m_aHeader.arp_hdType[0] = 1;
-		this.m_aHeader.arp_prototype = byte4To2(intToByte(0x0800));
+		this.m_aHeader.arp_hdType = byte4To2(intToByte(1));
+		this.m_aHeader.arp_prototype[0] = (byte) 0x08;
+		this.m_aHeader.arp_prototype[1] = (byte) 0x00;
 		this.m_aHeader.arp_hdLength = 6;
 		this.m_aHeader.arp_protoLength = 4;
 		this.m_aHeader.arp_op[0] = 1;
