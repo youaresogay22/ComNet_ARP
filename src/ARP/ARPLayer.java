@@ -189,37 +189,47 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
-		System.out.println("ARP/BASIC SEND IN");
-		setARPHeaderBeforeSend();   		// opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
-		setSrcMAC(MY_MAC_ADDRESS.addr);
-		setSrcIPAddr(MY_IP_ADDRESS.addr);
-		byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
-		
-		if (isTargetHdAddrQuestion(ARP_header_added_bytes)) {	// Target's hardware addr이 ???이면, IP에서 내려온 send. -> send request message.
+		if ( cameFromDlg(input)) {	// 비어 있는 byte[]다 -> Dlg에서 왔다 -> Send Request Message.
+			setARPHeaderBeforeSend();   		// opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
+			setSrcMAC(MY_MAC_ADDRESS.addr);
+			setSrcIPAddr(MY_IP_ADDRESS.addr);
+			//setDst는 GUI에서 이루어지고 있다.
+			byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
+			
 			String target_IP = getDstAddrFromHeader(ARP_header_added_bytes);
 			_Cache_Entry cache_Entry = 									 // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
-					new _Cache_Entry(new byte[6], "Incomplete", 10);
+					new _Cache_Entry(new byte[6], "Incomplete", 80);
 			//Map의 put 메소드는 기본적으로 put의 인자로 전달받은 key(new)가 이전의 key(old)를 replace하게끔 구현되어 있다.
 			//따라서 1.1.1.1을 Map에 put한 다음에, 1.1.1.1이 ttl로 삭제되기 이전에 1.1.1.1을 다시 Map에 put하면은, ttl이 초기화된다.
 			//아래 if문은 new key가 old key를 대체하지 않게끔 중복체크하여 ttl이 초기화되는 일을 방지함.
 			if(!cache_Table.containsKey(target_IP))
 				cache_Table.put(target_IP, cache_Entry);
-
-			System.out.println("Send MAP == " + target_IP);	// 디버깅
 			
 			this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);	//Send Request Message
-		}else {  //Target's hadrware addr이 xx:xx이면, Receive에서 온 Send. Receive에서 UpdateCache를 통해 Complete된 목록이 있음. -> Send Reply Message
-			if(AreMyPcIPAndPacketIPtheSame(input)) { 				//내 PC의 IP == 패킷의 target IP,
-				for(int i=0; i<6; i++)
-					input[i+18] = MY_MAC_ADDRESS.addr[i];					//패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
-				ARP_header_added_bytes = swappingAddr(input);	//src 주소 <-> target 주소 swapping
-				setOpCode(2); 											//setOpcode(2) to reply
-				this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length);	//Send Reply Message
-			}else {		//내 PC의 IP 주소 != 패킷의 target IP, 
-						//DROP. Do not send reply packet. do nothing. cache table update only -> (from Receive) PT03 23page
-			}
+		}else {  	// byte[]가 비어있지 않다 -> Send Reply Message
+			
+			//  if(AreMyPcIPAndPacketIPtheSame(input)) { //내 PC의 IP == 패킷의 target IP, 
+			// Recv에서 isItMine으로 거르기 때문에 위 조건문은 필요 없다.
+			 
+			// setOPCode를 사용한 다음에는 ObjToByte를 사용해야 하는데, objToByte를 사용하면 길이가 +28된다.
+			for (int i = 0; i < 6; i++)
+				input[i + 18] = MY_MAC_ADDRESS.addr[i]; // 패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
+			input = swappingAddr(input); 				// src 주소 <-> target 주소 swapping
+			input[6] = (byte) 0x00;						//setOpCode(2)
+			input[7] = (byte) 0x02;
+			this.GetUnderLayer().Send(input, input.length); // Send Reply Message
 		}
 		return false;
+	}
+	
+	public boolean cameFromDlg(byte[] input) {
+		for (int i = 0; i < input.length; i++) {
+			if (input[i] == 0)
+				continue;
+			else
+				return false;
+		}
+		return true;
 	}
 	
 	
@@ -231,17 +241,6 @@ public class ARPLayer implements BaseLayer {
 				return false;
 		}
 		return false;
-	}
-	
-	// 내 PC의 IP주소와 Packet의 target IP가 같은지 확인한다
-	public boolean AreMyPcIPAndPacketIPtheSame(byte[] input) {
-		for(int i=0; i<4; i++) {
-			if(MY_IP_ADDRESS.addr[i] == input[i+24])
-				continue;
-			else
-				return false;
-		}
-		return true;
 	}
 	
 	public boolean IsItProxyMine(byte[] input) {
@@ -288,13 +287,17 @@ public class ARPLayer implements BaseLayer {
 				} else
 					return false;
 
-			} else if (isGratuitousARP(input)) {// Gratuitous ARP request  인 경우
+			} 
+			else if (isGratuitousARP(input)) {// Gratuitous ARP request  인 경우
 					updateCache(input);
 					return true;
-			} else {// basic ARP request 인 경우
-				if (Mine || Incomplete) {
-					// then basic send
-					Send("".getBytes(), 0);
+			} 
+			else {// basic ARP request 인 경우
+				//if (Mine || Incomplete) {
+					if(Mine) {
+				// then basic send
+					updateCache(input);
+					Send(input, input.length);
 					return true;
 				} else
 					return false;
@@ -328,7 +331,6 @@ public class ARPLayer implements BaseLayer {
 
 	// Grat Send
 	public boolean GratSend(byte[] input, int length) {
-		System.out.println("GRAT SEND IN");
 		// ARP헤더 초기 세팅
 		setARPHeaderBeforeSend();
 		// Sender's hardware address를 세팅
@@ -516,21 +518,25 @@ public class ARPLayer implements BaseLayer {
 
 	public byte[] swappingAddr(byte[] input) {
 		byte[] tempMACAddr = new byte[6];
-		byte[] tempProtoAddr = new byte[6];
-
-		// temp에 src주소 저장
-		for (int i = 0; i < 6; i++) {
-			tempMACAddr[i] = input[8 + i];
-			tempProtoAddr[i] = input[14 + i];
-		}
-		for (int j = 0; j < 6; j++) {
-			// src에 dst를 저장
-			input[8 + j] = input[18 + j];
-			input[14 + j] = input[24 + j];
-			// dst에 src를 저장
-			input[18 + j] = tempMACAddr[j];
-			input[24 + j] = tempProtoAddr[j];
-		}
+		byte[] tempProtoAddr = new byte[4];
+		int macI, ipI;
+		
+		// temp에 src를 저장
+		for (macI = 0; macI < 6; macI++) 
+			tempMACAddr[macI] = input[8 + macI];
+		for(ipI = 0; ipI< 4; ipI++)
+			tempProtoAddr[ipI] = input[14 + ipI];
+		// src에 dst를 저장
+		for(macI =0; macI<6; macI++)
+			input[8 + macI] = input[18 + macI];
+		for(ipI = 0; ipI< 4; ipI++)
+			input[14 + ipI] = input[24 + ipI];
+		//dst에 src를 저장
+		for(macI =0; macI<6; macI++)
+			input[18 + macI] = tempMACAddr[macI];
+		for(ipI = 0; ipI< 4; ipI++)
+			input[24 + ipI] = tempProtoAddr[ipI];
+		
 		return input;
 	}
 	
@@ -545,6 +551,18 @@ public class ARPLayer implements BaseLayer {
 		}
 		return dst_Addr.substring(0, dst_Addr.length() - 1);
 	}
+	
+	public String getDstAddrFromSwappedHeader(byte[] input) {
+		byte[] bytes = new byte[4];
+
+		String dst_Addr = "";
+		System.arraycopy(input, 14, bytes, 0, 4);
+		for (byte b : bytes) {
+			dst_Addr += Integer.toString(b & 0xFF) + ".";
+		}
+		return dst_Addr.substring(0, dst_Addr.length() - 1);
+	}
+
 
 	private boolean isRequest(byte[] input) {
 		for (int i = 0; i < 2; i++) {
@@ -574,7 +592,7 @@ public class ARPLayer implements BaseLayer {
 		// 나의 IP를 가져온다
 		_IP_ADDR myIp = new _IP_ADDR();
 		_IP_ADDR target = new _IP_ADDR();
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < 4; i++) {
 			target.addr[i] = input[i + 24];
 		}// ※ target.addr -> target.addr.toString()
 		if (!Arrays.equals(myIp.addr, target.addr) && cache_Table.containsKey(target.addr.toString()) == true) {
@@ -595,13 +613,15 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	private boolean IsItMine(byte[] input) {
-		for (int i = 0; i < 6; i++) {
-			if (MY_MAC_ADDRESS.addr[i] == input[i + 18])
-				continue;//내 맥 주소 = destHdAddr인지 탐색
-			else {
-				return false;
-			}
-		}
+		// basic ARP Receive Request Message 시점에는 패킷의 destHdAddr이 ??임
+		//for (int i = 0; i < 6; i++) {
+		//	if (MY_MAC_ADDRESS.addr[i] == input[i + 18])
+		//		continue;//내 맥 주소 = destHdAddr인지 탐색
+		//	else {
+		//		return false;
+		//	}
+		//}
+		
 		for (int i = 0; i < 4; i++) {
 			if (MY_IP_ADDRESS.addr[i] == input[i + 24])
 				continue;//내 IP 주소 = destProtoAddr인지 탐색
@@ -613,18 +633,18 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public void updateCache(byte[] input) {
-		if (cache_Table.containsKey(getDstAddrFromHeader(input))) {// ip주소가 테이블에 존재하는 경우 == ARP reply 수신 시
-			_Cache_Entry tableToUpdate = cache_Table.get(getDstAddrFromHeader(input));
-			
+		//ARP Reply수신 시 swap된 패킷이 전송되기 때문에, 기존 24를 참조하던 코드를 14로 변경.
+		if (cache_Table.containsKey(getDstAddrFromSwappedHeader(input))) {// ip주소가 테이블에 존재하는 경우 == ARP reply 수신 시
+			_Cache_Entry tableToUpdate = cache_Table.get(getDstAddrFromSwappedHeader(input));
 			System.arraycopy(input, 8, tableToUpdate.cache_ethaddr, 0, 6);// cache table 내부 이더넷 주소 update
 			tableToUpdate.cache_status = "Complete";// 테이블 내부 상태 변경
-			tableToUpdate.cache_ttl = 20; // complete인 경우 ttl = 20
-			
-		} else { // ip주소가 테이블에 존재하지 않는 경우 == ARP request 수신 시
-			String request_ip_string = getDstAddrFromHeader(input);
+			tableToUpdate.cache_ttl = 80; // complete인 경우 ttl = 20
+		//Request Message를 수신한 PC에서는 dst가 아닌 패킷 Src(14)의 주소를 테이블에 put해야 한다	
+		} else if(!cache_Table.containsKey(getDstAddrFromHeader(input))){ // ip주소가 테이블에 존재하지 않는 경우 == ARP request 수신 시
+			String request_ip_string = getDstAddrFromSwappedHeader(input);
 			byte[] request_ether_addr = new byte[6];
 			System.arraycopy(input, 8, request_ether_addr, 0, 6);
-			_Cache_Entry request_cache_Entry = new _Cache_Entry(new byte[6], "Complete", 20);// complete인 경우 ttl = 20
+			_Cache_Entry request_cache_Entry = new _Cache_Entry(request_ether_addr, "Complete", 80);// complete인 경우 ttl = 20
 
 			cache_Table.put(request_ip_string, request_cache_Entry);
 		}

@@ -26,7 +26,6 @@ public class NILayer implements BaseLayer {
 	public NILayer(String pName) {
 		// super(pName);
 		pLayerName = pName;
-
 		m_pAdapterList = new ArrayList<PcapIf>();
 		m_iNumAdapter = 0;
 		SetAdapterList();
@@ -37,6 +36,8 @@ public class NILayer implements BaseLayer {
 		int flags = Pcap.MODE_PROMISCUOUS; // capture all packets
 		int timeout = 10 * 1000; // 10 seconds in millis
 		m_AdapterObject = Pcap.openLive(m_pAdapterList.get(m_iNumAdapter).getName(), snaplen, flags, timeout, errbuf);
+		for(int i=0; i<m_pAdapterList.size(); i++)
+			System.out.println(m_pAdapterList.get(i));
 	}
 
 	public PcapIf GetAdapterObject(int iIndex) {
@@ -73,7 +74,7 @@ public class NILayer implements BaseLayer {
 
 	public boolean Receive() {
 		Receive_Thread thread = new Receive_Thread(m_AdapterObject, this.GetUpperLayer(0));
-		Thread obj = new Thread(thread);
+		Thread obj = new Thread(thread,"Receive Thread");
 		obj.start();
 
 		return false;
@@ -145,7 +146,6 @@ class Receive_Thread implements Runnable {
 					UpperLayer.Receive(data);
 				}
 			};
-
 			AdapterObject.loop(100000, jpacketHandler, "");
 		}
 	}

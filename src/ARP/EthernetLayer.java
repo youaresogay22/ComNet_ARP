@@ -199,7 +199,7 @@ public class EthernetLayer implements BaseLayer {
 
 	public boolean IsItBroadcast(byte[] input) {
 		for (int i = 0; i < 6; i++) {
-			if (input[i] == 0xff) {
+			if (input[i] == (byte)-1) {
 				continue;
 			} else
 				return false;
@@ -238,6 +238,7 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Receive(byte[] input) {
+		int len = input.length;
 		byte[] data;
 		boolean MyPacket, Mine, Broadcast;
 		MyPacket = IsItMyPacket(input);
@@ -256,7 +257,7 @@ public class EthernetLayer implements BaseLayer {
 				}
 			}
 		}
-
+		
 		// ARP 과제 추가 사항:
 		if (IsItARP(input)) {// ARP이고
 			Mine = IsItMine(input);
@@ -270,6 +271,7 @@ public class EthernetLayer implements BaseLayer {
 		} else
 			return false;
 	}
+		
 
 	public static byte[] intToByte(int value) {
 		byte[] byteArray = new byte[4];
