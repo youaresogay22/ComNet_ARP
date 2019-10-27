@@ -146,11 +146,11 @@ public class EthernetLayer implements BaseLayer {
 		}
 		// my_srcAddress 세팅
 		// Gratuitous ARP일 경우, 변경 전 MAC주소 세팅
-		if (isGratuitousARP(input)) {
-			my_srcAddress = GetEnetSrcAddress().addr;
-		} else {
-			System.arraycopy(input, 8, my_srcAddress, 0, 6);
-		}
+//		if (isGratuitousARP(input)) {
+//			my_srcAddress = GetEnetSrcAddress().addr;
+//		} else {
+		System.arraycopy(input, 8, my_srcAddress, 0, 6);
+//		}
 		// my_enetType 세팅
 		System.arraycopy(enetType_ARP, 0, my_enetType, 0, 2);
 
