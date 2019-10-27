@@ -20,7 +20,7 @@ public class EthernetLayer implements BaseLayer {
 	private final static byte[] enetType_IP = byte4To2(intToByte(0x0800));
 	private final static byte[] broadcastAddr = { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
 			(byte) 0xFF };
-	byte[] GratOriginMac = null;//GratARP할때 사용할 원래 맥 주소(변경전 맥주소)
+	byte[] GratOriginMac = new byte[6];//GratARP할때 사용할 원래 맥 주소(변경전 맥주소)
 	
 	private class _ETHERNET_ADDR {
 		private byte[] addr = new byte[6];
