@@ -130,38 +130,46 @@ public class EthernetLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
-		setEtherHeader(input);
-		byte[] bytes = ObjToByte(m_sHeader, input, length);
+	      try {
+	         setEtherHeader(input);
+	         byte[] bytes = ObjToByte(m_sHeader, input, length);
 
-		this.GetUnderLayer().Send(bytes, length + 14);
-		return false;
-	}
+	         this.GetUnderLayer().Send(bytes, length + 14);
+	         
+	      } catch (SocketException e) {
+	         // TODO 자동 생성된 catch 블록
+	         e.printStackTrace();
+	      }
+	      
+	      return false;
+	   }
 
-	public void setEtherHeader(byte[] input) {
-		byte[] my_dstAddress = new byte[6];
-		byte[] my_srcAddress = new byte[6];
-		byte[] my_enetType = new byte[2];
+	public void setEtherHeader(byte[] input) throws SocketException {
+	      byte[] my_dstAddress = new byte[6];
+	      byte[] my_srcAddress = new byte[6];
+	      byte[] my_enetType = new byte[2];
 
-		// my_dstAddress 세팅
-		if (needToBroadCast(input)) {
-			System.arraycopy(broadcastAddr, 0, my_dstAddress, 0, 6);
-		} else {
-			System.arraycopy(input, 18, my_dstAddress, 0, 6);
-		}
-		// my_srcAddress 세팅
-		// Gratuitous ARP일 경우, 변경 전 MAC주소 세팅
-		if (isGratuitousARP(input)) {
-			System.arraycopy(input, 8, GratOriginMac, 0, 6);
-		} else {
-			System.arraycopy(input, 8, my_srcAddress, 0, 6);
-		}
-		// my_enetType 세팅
-		System.arraycopy(enetType_ARP, 0, my_enetType, 0, 2);
+	      // my_dstAddress 세팅
+	      if (needToBroadCast(input)) {
+	         System.arraycopy(broadcastAddr, 0, my_dstAddress, 0, 6);
+	      } else {
+	         System.arraycopy(input, 18, my_dstAddress, 0, 6);
+	      }
+	      // my_srcAddress 세팅
+	      // Gratuitous ARP일 경우, 변경 전 MAC주소 세팅
+	      if (isGratuitousARP(input)) {
+	         this.getMyPCAddr();
+	         System.arraycopy(GratOriginMac, 0, my_srcAddress, 0, 6);
+	      } else {
+	         System.arraycopy(input, 8, my_srcAddress, 0, 6);
+	      }
+	      // my_enetType 세팅
+	      System.arraycopy(enetType_ARP, 0, my_enetType, 0, 2);
 
-		SetEnetDstAddress(my_dstAddress);
-		SetEnetSrcAddress(my_srcAddress);
-		SetEnetType(my_enetType);
-	}
+	      SetEnetDstAddress(my_dstAddress);
+	      SetEnetSrcAddress(my_srcAddress);
+	      SetEnetType(my_enetType);
+	   }
 	//PC의 맥주소 가져오기
 	public void getMyPCAddr() throws SocketException {
 	      Enumeration<NetworkInterface> interfaces = null;
@@ -248,7 +256,7 @@ public class EthernetLayer implements BaseLayer {
 
 	// Gratuitous ARP인지 확인합니다.
 	public boolean isGratuitousARP(byte[] input) {
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < 4; i++) {
 			if (input[i + 14] == input[i + 24])
 				continue;
 			else {
