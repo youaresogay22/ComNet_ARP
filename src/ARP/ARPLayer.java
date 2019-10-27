@@ -259,16 +259,6 @@ public class ARPLayer implements BaseLayer {
 		return true;
 	}
 
-	public boolean isTargetHdAddrQuestion(byte[] input) {
-		for (int i = 0; i < 6; i++) {
-			if (input[18 + i] == 0)
-				return true;
-			else
-				return false;
-		}
-		return false;
-	}
-
 //	public boolean IsItProxyMine(byte[] input) {
 //		_IP_ADDR newIP = new _IP_ADDR();
 //		for (int i = 0; i < 4; i++) {
