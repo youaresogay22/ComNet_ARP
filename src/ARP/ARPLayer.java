@@ -376,8 +376,9 @@ public class ARPLayer implements BaseLayer {
 		for (int i = 0; i < 6; i++) {
 			newHdAddr.addr[i] = input[8 + i];
 		}
+		String srcIP = getDstAddrFromSwappedHeader(input);
 		_Cache_Entry newEntry = new _Cache_Entry(newHdAddr.addr, "Complete", 12);
-		cache_Table.put(m_aHeader.arp_srcProtoAddr.toString(), newEntry);
+		cache_Table.put(srcIP, newEntry);
 		// 2. target protocol address가 proxy table에 있는지 확인
 		// 헤더의 target protocol address를 가져온다.
 		_IP_ADDR target = new _IP_ADDR();
