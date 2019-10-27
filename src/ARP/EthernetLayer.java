@@ -199,7 +199,7 @@ public class EthernetLayer implements BaseLayer {
 
 	public boolean IsItBroadcast(byte[] input) {
 		for (int i = 0; i < 6; i++) {
-			if (input[i] == (byte)-1) {
+			if (input[i] == (byte) -1) {
 				continue;
 			} else
 				return false;
@@ -237,6 +237,13 @@ public class EthernetLayer implements BaseLayer {
 		return true;
 	}
 
+//	// ARPLayer로부터 원래 MAC주소를 받아옴
+//	public void setMACAddr(byte[] addr) {
+//		for (int i = 0; i < addr.length; i++) {
+//			this.m_sHeader.enet_srcaddr.addr[i] = addr[i];
+//		}
+//	}
+
 	public boolean Receive(byte[] input) {
 		int len = input.length;
 		byte[] data;
@@ -257,7 +264,7 @@ public class EthernetLayer implements BaseLayer {
 				}
 			}
 		}
-		
+
 		// ARP 과제 추가 사항:
 		if (IsItARP(input)) {// ARP이고
 			Mine = IsItMine(input);
@@ -271,7 +278,6 @@ public class EthernetLayer implements BaseLayer {
 		} else
 			return false;
 	}
-		
 
 	public static byte[] intToByte(int value) {
 		byte[] byteArray = new byte[4];
