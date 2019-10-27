@@ -25,7 +25,8 @@ public class ARPLayer implements BaseLayer {
 	private final byte[] PROTOCOL_TYPE_IP = byte4To2(intToByte(0x0800));
 	public final _IP_ADDR MY_IP_ADDRESS = new _IP_ADDR();
 	public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
-
+	private static LayerManager m_LayerMgr = new LayerManager();
+	
 	public class _Cache_Entry {
 		// basic cache
 		byte[] cache_ethaddr;
@@ -339,15 +340,19 @@ public class ARPLayer implements BaseLayer {
 
 	// Grat Send
 	public boolean GratSend(byte[] input, int length) {
+		
+//		// EthernetLayer로 내 MAC주소 보내기
+//		((EthernetLayer) m_LayerMgr.GetLayer("Ethernet")).setMACAddr(MY_MAC_ADDRESS.addr);
+	
 		// ARP헤더 초기 세팅
 		setARPHeaderBeforeSend();
-		// Sender's hardware address를 세팅
-		setSrcMAC(MY_MAC_ADDRESS.addr); // 자기 MAC주소 가져와서 넣기
+		// Sender's hardware address를 세팅, 
+		// 바꿀 MAC주소를 가져와서 넣기(Dlg)
 		// Sender's protocol address를 세팅
 		setSrcIPAddr(MY_IP_ADDRESS.addr); // 자기 IP주소 가져와서 넣기
 		// Target's protocol address를 세팅
 		setDstIPAddr(MY_IP_ADDRESS.addr); // 자기 IP주소 가져와서 넣기
-
+		
 		// Gratuitous ARP Message 생성
 		byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
 
