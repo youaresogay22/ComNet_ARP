@@ -289,7 +289,6 @@ public class ARPLayer implements BaseLayer {
 		boolean proxyMine = IsItProxyMine(input);
 
 		if (isRequest(input)) {// ARP request 인 경우
-
 			if (isProxyARP(input)) {// proxy ARP request 인 경우
 				if (proxyMine) {// then proxy send
 					boolean proxyTrue = proxyRQReceive(input, input.length);
@@ -358,7 +357,6 @@ public class ARPLayer implements BaseLayer {
 
 		// Gratuitous ARP Message 내려보내기
 		this.GetUnderLayer().Send(grat_message, grat_message.length);
-
 		return true;
 	}
 //  proxy request send와 basic request send가 동일하여 일단 주석 처리했습니다.
@@ -386,35 +384,6 @@ public class ARPLayer implements BaseLayer {
 //		this.GetUnderLayer().Send(bytes, length + 28);
 //		return true;
 //	}
-
-	// input은 데이터, length는 데이터 length
-	public boolean proxyRPSend(byte[] input, int length) {
-		// 1. arp message의 target protocol address가 proxy entry에 있는지 이미 proxyRQReceive에서 확인함.
-		// 2. arp message 작성
-		// setARPHeaderBeforeSend();
-		//_IP_ADDR target = new _IP_ADDR();
-		//for (int i = 0; i < 4; i++) {
-		//	target.addr[i] = input[i + 24];
-		//}
-		// cache table에서 찾기 위해 target protocol address를 string으로 변환
-		//String tIpAddr = target.addr.toString();
-		// 찾은 ip주소로 target hardware address를 가져온다.
-		// mac에는 target hardware address가 들어있다.
-		//byte[] mac = proxy_Table.get(tIpAddr).proxy_ethaddr;
-		// header의 target hardware address에  자기의 맥주소를 넣어야 한다.(10/27)
-		for(int i = 0; i < 6; i++) {
-			input[i+18] = MY_MAC_ADDRESS.addr[i];
-		}
-		// ※ 주소 swapping
-		input = swappingAddr(input);
-		// opcode를 reply(2)로 변경
-		input[6] = (byte)0x00;
-		input[7] = (byte)0x02;
-		//byte[] bytes = ObjToByte(m_aHeader, input, length);
-		this.GetUnderLayer().Send(input, input.length);
-		return true;
-	}
-
 	public boolean proxyRQReceive(byte[] input, int length) {
 		// 1. arp cache table 업데이트
 		_ETHERNET_ADDR newHdAddr = new _ETHERNET_ADDR();
@@ -439,6 +408,32 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 
+	public boolean proxyRPSend(byte[] input, int length) {
+		// 1. arp message의 target protocol address가 proxy entry에 있는지 이미 proxyRQReceive에서 확인함.
+		// 2. arp message 작성
+		//setARPHeaderBeforeSend();
+		//_IP_ADDR target = new _IP_ADDR();
+		//for (int i = 0; i < 4; i++) {
+		//	target.addr[i] = input[i + 24];
+		//}
+		// cache table에서 찾기 위해 target protocol address를 string으로 변환
+		//String tIpAddr = target.addr.toString();
+		// 찾은 ip주소로 target hardware address를 가져온다.
+		// mac에는 target hardware address가 들어있다.
+		//byte[] mac = proxy_Table.get(tIpAddr).proxy_ethaddr;
+		// header의 target hardware address에  자기의 맥주소를 넣어야 한다.(10/27)
+		for(int i = 0; i < 6; i++) {
+			input[i+18] = MY_MAC_ADDRESS.addr[i];
+		}
+		// ※ 주소 swapping
+		input = swappingAddr(input);
+		// opcode를 reply(2)로 변경
+		input[6] = (byte)0x00;
+		input[7] = (byte)0x02;
+		//byte[] bytes = ObjToByte(m_aHeader, input, length);
+		this.GetUnderLayer().Send(input, input.length);
+		return true;
+	}
 	public boolean proxyRPReceive(byte[] input) {
 		// 헤더에서 target ip, target mac 가져오기
 		_IP_ADDR targetIP = new _IP_ADDR();
