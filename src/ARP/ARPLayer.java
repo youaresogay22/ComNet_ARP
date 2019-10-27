@@ -270,35 +270,31 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 
-	public boolean IsItProxyMine(byte[] input) {
-		_IP_ADDR newIP = new _IP_ADDR();
-		for (int i = 0; i < 4; i++) {
-			newIP.addr[i] = input[i + 24];
-		}
-		if (proxy_Table.containsKey(newIP.addr.toString()) == true) {
-			return true;
-		} else {
-			return false;
-		}
-	}
+//	public boolean IsItProxyMine(byte[] input) {
+//		_IP_ADDR newIP = new _IP_ADDR();
+//		for (int i = 0; i < 4; i++) {
+//			newIP.addr[i] = input[i + 24];
+//		}
+//		if (proxy_Table.containsKey(newIP.addr.toString()) == true) {
+//			return true;
+//		} else {
+//			return false;
+//		}
+//	}
 
 	// 10/25 수정: 같은 네트워크 상에서 ARP를 받아도 target이 자신이 아니면 캐시 테이블 업데이트는 하지 않는 것 같습니다.
 
 	public boolean Receive(byte[] input) {
 		boolean Mine = IsItMine(input);
-		boolean proxyMine = IsItProxyMine(input);
 
 		if (isRequest(input)) {// ARP request 인 경우
 			if (isProxyARP(input)) {// proxy ARP request 인 경우
-				if (proxyMine) {// then proxy send
 					boolean proxyTrue = proxyRQReceive(input, input.length);
 					if(proxyTrue == true) {
 						proxyRPSend(input, input.length);
+						return true;
 					}
-					return true;
-				} else
 					return false;
-
 			} else if (isGratuitousARP(input)) {// Gratuitous ARP request 인 경우
 				updateCache(input);
 				return true;
@@ -614,6 +610,9 @@ public class ARPLayer implements BaseLayer {
 	private boolean isProxyARP(byte[] input) {
 		// 나의 IP를 가져온다
 		_IP_ADDR myIp = new _IP_ADDR();
+		for(int i = 0; i < 4; i++) {
+			myIp.addr[i] = MY_IP_ADDRESS.addr[i];
+		}
 		_IP_ADDR target = new _IP_ADDR();
 		for (int i = 0; i < 4; i++) {
 			target.addr[i] = input[i + 24];
