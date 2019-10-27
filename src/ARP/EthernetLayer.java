@@ -151,7 +151,7 @@ public class EthernetLayer implements BaseLayer {
 		// my_srcAddress 세팅
 		// Gratuitous ARP일 경우, 변경 전 MAC주소 세팅
 		if (isGratuitousARP(input)) {
-			System.arraycopy(input, 8, GratOriginMac, 0, 6);
+			System.arraycopy(GratOriginMac, 0, my_srcAddress, 0, 6);
 		} else {
 			System.arraycopy(input, 8, my_srcAddress, 0, 6);
 		}
@@ -248,7 +248,7 @@ public class EthernetLayer implements BaseLayer {
 
 	// Gratuitous ARP인지 확인합니다.
 	public boolean isGratuitousARP(byte[] input) {
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < 4; i++) {
 			if (input[i + 14] == input[i + 24])
 				continue;
 			else {
