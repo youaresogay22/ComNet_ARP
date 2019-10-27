@@ -301,9 +301,6 @@ public class ARPLayer implements BaseLayer {
 		boolean proxyMine = IsItProxyMine(input);
 		boolean hasThisIP = hasThisIPAddr(input);
 		
-		if (!hasThisIP) {// 10/25 수정: target이 아닌 같은 네트워크 상의 다른 유저라도 테이블은 업데이트함
-			updateCache(input);
-		}
 
 		if (isRequest(input)) {// ARP request 인 경우
 

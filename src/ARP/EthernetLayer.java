@@ -20,8 +20,8 @@ public class EthernetLayer implements BaseLayer {
 	private final static byte[] enetType_IP = byte4To2(intToByte(0x0800));
 	private final static byte[] broadcastAddr = { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
 			(byte) 0xFF };
-	byte[] GratOriginMac = null;//GratARP할때 사용할 원래 맥 주소(변경전 맥주소)
-	
+	byte[] GratOriginMac = null;// GratARP할때 사용할 원래 맥 주소(변경전 맥주소)
+
 	private class _ETHERNET_ADDR {
 		private byte[] addr = new byte[6];
 
@@ -151,9 +151,9 @@ public class EthernetLayer implements BaseLayer {
 		// my_srcAddress 세팅
 		// Gratuitous ARP일 경우, 변경 전 MAC주소 세팅
 		if (isGratuitousARP(input)) {
-			System.arraycopy(input, 8, GratOriginMac, 0, 6);
+			my_srcAddress = GetEnetSrcAddress().addr;
 		} else {
-			System.arraycopy(input, 8, my_srcAddress, 0, 6);
+			System.arraycopy(input, 8, GratOriginMac, 0, 6);
 		}
 		// my_enetType 세팅
 		System.arraycopy(enetType_ARP, 0, my_enetType, 0, 2);
@@ -162,23 +162,23 @@ public class EthernetLayer implements BaseLayer {
 		SetEnetSrcAddress(my_srcAddress);
 		SetEnetType(my_enetType);
 	}
-	//PC의 맥주소 가져오기
-	public void getMyPCAddr() throws SocketException {
-	      Enumeration<NetworkInterface> interfaces = null;
-	      interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
 
-	      // isUP 중에 MAC과 IP 주소를 출력
-	      while (interfaces.hasMoreElements()) {
-	         NetworkInterface networkInterface = interfaces.nextElement();
-	         if (networkInterface.isUp()) {
-	            if (networkInterface.getHardwareAddress() != null) {// loop back Interface가 null이므로, 걸러준다.
-	               GratOriginMac = networkInterface.getHardwareAddress(); // MAC주소 받기
-	               break; // 현재 사용중인 NIC 이외에는 필요 없다. 반복문 탈출
-	            }
-	         }
-	      }
-	   }
-	
+	// PC의 맥주소 가져오기
+	public void getMyPCAddr() throws SocketException {
+		Enumeration<NetworkInterface> interfaces = null;
+		interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
+
+		// isUP 중에 MAC과 IP 주소를 출력
+		while (interfaces.hasMoreElements()) {
+			NetworkInterface networkInterface = interfaces.nextElement();
+			if (networkInterface.isUp()) {
+				if (networkInterface.getHardwareAddress() != null) {// loop back Interface가 null이므로, 걸러준다.
+					GratOriginMac = networkInterface.getHardwareAddress(); // MAC주소 받기
+					break; // 현재 사용중인 NIC 이외에는 필요 없다. 반복문 탈출
+				}
+			}
+		}
+	}
 
 	// ARP 과제 추가 메서드 sendARP는 필요 없을 것 같아서 삭제했습니다.
 	// ARP 헤더는 ARP layer에서 만드는 거니까 broadcasting 만 해 주면 될 것 같습니다.
