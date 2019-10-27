@@ -276,7 +276,6 @@ public class ARPLayer implements BaseLayer {
 	public boolean Receive(byte[] input) {
 		boolean Mine = IsItMine(input);
 		if (isRequest(input)) {// ARP request 인 경우
-			System.out.println(isProxyARP(input));
 			if (isProxyARP(input)) {// proxy ARP request 인 경우
 				boolean proxyTrue = proxyRQReceive(input, input.length);
 				if (proxyTrue == true) {
@@ -289,7 +288,9 @@ public class ARPLayer implements BaseLayer {
 				return true;
 
 			} else {// basic ARP request 인 경우
+
 				if (Mine) {
+					updateCache(input);
 					Send(input, input.length);// 내 ip 주소로 온 ARP일 때만 reply
 					return true;
 				} else
