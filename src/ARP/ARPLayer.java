@@ -309,9 +309,10 @@ public class ARPLayer implements BaseLayer {
 
 			if (isProxyARP(input)) {// proxy ARP request 인 경우
 				if (proxyMine) {// then proxy send
-					proxyRQReceive(input, input.length);
-					updateCache(input);
-					proxyRPSend(input, input.length);
+					boolean proxyTrue = proxyRQReceive(input, input.length);
+					if(proxyTrue == true) {
+						proxyRPSend(input, input.length);
+					}
 					return true;
 				} else
 					return false;
@@ -331,7 +332,6 @@ public class ARPLayer implements BaseLayer {
 		} else if (isReply(input)) {// ARP reply 인 경우
 			if (isProxyARP(input)) {// proxy ARP reply 인 경우
 				if (Mine) {// then proxy send
-					updateCache(input);
 					proxyRPReceive(input);
 					return true;
 				} else
@@ -406,49 +406,50 @@ public class ARPLayer implements BaseLayer {
 
 	// input은 데이터, length는 데이터 length
 	public boolean proxyRPSend(byte[] input, int length) {
-		// 1. arp message의 target protocol address가 proxy entry에 있는지 이미 proxyRQReceive에서
-		// 확인함.
+		// 1. arp message의 target protocol address가 proxy entry에 있는지 이미 proxyRQReceive에서 확인함.
 		// 2. arp message 작성
-		setARPHeaderBeforeSend();
+		// setARPHeaderBeforeSend();
+		//_IP_ADDR target = new _IP_ADDR();
+		//for (int i = 0; i < 4; i++) {
+		//	target.addr[i] = input[i + 24];
+		//}
+		// cache table에서 찾기 위해 target protocol address를 string으로 변환
+		//String tIpAddr = target.addr.toString();
+		// 찾은 ip주소로 target hardware address를 가져온다.
+		// mac에는 target hardware address가 들어있다.
+		//byte[] mac = proxy_Table.get(tIpAddr).proxy_ethaddr;
+		// header의 target hardware address에  자기의 맥주소를 넣어야 한다.(10/27)
+		for(int i = 0; i < 6; i++) {
+			input[i+18] = MY_MAC_ADDRESS.addr[i];
+		}
+		// ※ 주소 swapping
+		input = swappingAddr(input);
+		// opcode를 reply(2)로 변경
+		input[6] = (byte)0x00;
+		input[7] = (byte)0x02;
+		//byte[] bytes = ObjToByte(m_aHeader, input, length);
+		this.GetUnderLayer().Send(input, input.length);
+		return true;
+	}
+
+	public boolean proxyRQReceive(byte[] input, int length) {
+		// 1. arp cache table 업데이트
+		_ETHERNET_ADDR newHdAddr = new _ETHERNET_ADDR();
+		for(int i= 0; i < 6; i++) {
+			newHdAddr.addr[i] = input[8+i];
+		}
+		 _Cache_Entry newEntry = new _Cache_Entry(newHdAddr.addr, "Complete", 12);
+		cache_Table.put(m_aHeader.arp_srcProtoAddr.toString(), newEntry);
+		// 2. target protocol address가 proxy table에 있는지 확인
+		// 헤더의 target protocol address를 가져온다.
 		_IP_ADDR target = new _IP_ADDR();
 		for (int i = 0; i < 4; i++) {
 			target.addr[i] = input[i + 24];
 		}
 		// cache table에서 찾기 위해 target protocol address를 string으로 변환
 		String tIpAddr = target.addr.toString();
-		// 찾은 ip주소로 target hardware address를 가져온다.
-		// mac에는 target hardware address가 들어있다.
-		byte[] mac = proxy_Table.get(tIpAddr).proxy_ethaddr;
-		// header의 target hardware address에 알아낸 맥주소를 넣는다.
-		setDstMAC(mac);
-		// ※ 주소 swapping
-		swappingAddr(input);
-		// opcode를 reply(2)로 변경
-		setOpCode(2);
-		byte[] bytes = ObjToByte(m_aHeader, input, length);
-		this.GetUnderLayer().Send(bytes, length + 28);
-		return true;
-	}
-
-	public boolean proxyRQReceive(byte[] input, int length) {
-		// 1. arp cache table 업데이트
-		// _Cache_Entry newEntry = new _Cache_Entry(m_aHeader.arp_srcHdAddr.addr,
-		// "Complete", 12);
-		// cache_Table.put(m_aHeader.arp_srcProtoAddr.toString(), newEntry);
-		// ※ 수정 proxy table에 업데이트
-		_Proxy_Entry newEntry = new _Proxy_Entry(m_aHeader.arp_srcHdAddr.addr, "HOST NAME");
-		proxy_Table.put(m_aHeader.arp_srcProtoAddr.addr.toString(), newEntry);
-		// 2. target protocol address가 cache table에 있는지 확인
-		// 헤더의 target protocol address를 가져온다.
-		_IP_ADDR target = new _IP_ADDR();
-		for (int i = 0; i < 4; i++) {
-			target.addr[i] = input[i + 24];
-		}
-		// proxy table에서 찾기 위해 target protocol address를 string으로 변환
-		String tIpAddr = target.addr.toString();
 		// proxy table에 target proto addr이 존재하면 proxy reply send
 		if (proxy_Table.containsKey(tIpAddr) == true) {
-			proxyRPSend(input, length);
 			return true;
 		}
 		// cache_Table에 target proto addr이 존재하지 않으면 message drop
@@ -457,15 +458,27 @@ public class ARPLayer implements BaseLayer {
 
 	public boolean proxyRPReceive(byte[] input) {
 		// 헤더에서 target ip, target mac 가져오기
-		_IP_ADDR targetIP = getDstIpAddr();
-		_ETHERNET_ADDR targetMAC = getDstMAC();
+		_IP_ADDR targetIP = new _IP_ADDR();
+		for(int i = 0; i < 4; i++) {
+			targetIP.addr[i] =  input[i+24];
+		}
+		_ETHERNET_ADDR targetMAC = new _ETHERNET_ADDR();
+		for(int i = 0; i < 6; i++) {
+			targetMAC.addr[i] = input[i+18];
+		}
 		// 1. 내게 온 ARP RP message가 맞는지 확인
 		// 나의 ip주소와 target ip가 일치하는지 확인, 나의 mac주소와 target mac주소가 일치하는지 확인
 		if (Arrays.equals(MY_IP_ADDRESS.addr, targetIP.addr) && Arrays.equals(MY_MAC_ADDRESS.addr, targetMAC.addr)) {
 			// 2. sender protocol address가 내 cache_Table에 있는지 확인
-			_IP_ADDR senderIP = getSrcIPAddr();
-			String srcIpAddr = senderIP.toString();
-			_ETHERNET_ADDR senderMAC = getSrcMAC();
+			_IP_ADDR senderIP = new _IP_ADDR();
+			for(int i = 0; i < 4; i++) {
+				senderIP.addr[i] = input[i+14];
+			}
+			String srcIpAddr = senderIP.addr.toString();
+			_ETHERNET_ADDR senderMAC = new _ETHERNET_ADDR();
+			for(int i = 0; i < 6; i++) {
+				senderMAC.addr[i] = input[i+8]; 
+			}
 			// 내 cache_Table에 있다면 내 cache_table에 sender hd address 업데이트
 			if (cache_Table.containsKey(srcIpAddr) == true) {
 				cache_Table.replace(srcIpAddr, new _Cache_Entry(senderMAC.addr, "Complete", 10));
@@ -618,7 +631,7 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	// target IP address가 나의 ip주소는 아니지만,
-	// 내 cache_Table에 target ip address가 있을 때 proxy arp
+	// 내 proxy_Table에 target ip address가 있을 때 proxy arp
 	// 10/25 수정: 캐시테이블 대신 프록시 테이블 내부를 확인하도록 변경했습니다.
 	private boolean isProxyARP(byte[] input) {
 		// 나의 IP를 가져온다
