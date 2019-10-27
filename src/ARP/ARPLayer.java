@@ -316,31 +316,6 @@ public class ARPLayer implements BaseLayer {
 		return true;
 	}
 
-//  proxy request send와 basic request send가 동일하여 일단 주석 처리했습니다.
-//	public boolean proxyRQSend(byte[] input, int length) {
-//		// 1.ip주소를 cache table에 추가하는 과정
-//		// 2. arp message 작성
-//		setARPHeaderBeforeSend();
-//		setOpCode(1); // request
-//		setSrcMAC(MY_MAC_ADDRESS.addr); 
-//		setSrcIPAddr(MY_IP_ADDRESS.addr); 
-//		// setDstMac에 00:00:00:00:00:00 넣기
-//		_ETHERNET_ADDR dstMac = new _ETHERNET_ADDR();
-//		for (int i = 0; i < 6; i++) {
-//			dstMac.addr[i] = (byte) 0x00;
-//		}
-//		setDstMAC(dstMac.addr);
-//		// setDstIPAddr();  ui로 입력받은 ip주소 넣기
-//		_IP_ADDR dstIp = new _IP_ADDR();
-//		for (int i = 0; i < 4; i++) {
-//			dstIp.addr[i] = input[24 + i];
-//		}
-//		setDstIPAddr(dstIp.addr);
-//		byte[] bytes = ObjToByte(m_aHeader, input, length);
-//		// 3.ethernet으로 보낸다.
-//		this.GetUnderLayer().Send(bytes, length + 28);
-//		return true;
-//	}
 	public boolean proxyRQReceive(byte[] input, int length) {
 		// 1. arp cache table 업데이트
 		_ETHERNET_ADDR newHdAddr = new _ETHERNET_ADDR();
