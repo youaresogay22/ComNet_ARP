@@ -281,11 +281,28 @@ public class ARPLayer implements BaseLayer {
 		}
 	}
 
-	// 10/25 수정: 같은 네트워크 상에서 ARP를 받아도 target이 자신이 아니면 캐시 테이블 업데이트는 하지 않는 것 같습니다.
+	// 10/25 수정: incomplete가 아니라 ARP는 받았지만(같은 네트워크에 존재하지만)
+	// 테이블에 업데이트가 되지 않은 경우 테이블 업데이트를 위해 작성
+	private boolean hasThisIPAddr(byte[] input) {
+		byte[] ipByte = new byte[4];
+		System.arraycopy(input, 14, ipByte, 0, 4);
+
+		String src_IPaddr_String = ipByteToString(ipByte);
+
+		if (cache_Table.containsKey(src_IPaddr_String))
+			return true;
+		else
+			return false;
+	}
 
 	public boolean Receive(byte[] input) {
 		boolean Mine = IsItMine(input);
 		boolean proxyMine = IsItProxyMine(input);
+		boolean hasThisIP = hasThisIPAddr(input);
+		
+		if (!hasThisIP) {// 10/25 수정: target이 아닌 같은 네트워크 상의 다른 유저라도 테이블은 업데이트함
+			updateCache(input);
+		}
 
 		if (isRequest(input)) {// ARP request 인 경우
 
