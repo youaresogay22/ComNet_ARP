@@ -21,11 +21,8 @@ public class ARPLayer implements BaseLayer {
 	public Set<String> cache_Itr = cache_Table.keySet();
 	private final byte[] OP_ARP_REQUEST = byte4To2(intToByte(1));
 	private final byte[] OP_ARP_REPLY = byte4To2(intToByte(2));
-	private final byte[] TYPE_ARP = byte4To2(intToByte(0x0806));
-	private final byte[] PROTOCOL_TYPE_IP = byte4To2(intToByte(0x0800));
 	public final _IP_ADDR MY_IP_ADDRESS = new _IP_ADDR();
 	public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
-	private static LayerManager m_LayerMgr = new LayerManager();
 
 	public class _Cache_Entry {
 		// basic cache
@@ -125,7 +122,6 @@ public class ARPLayer implements BaseLayer {
 
 	public ARPLayer(String pName) throws SocketException {
 		// super(pName);
-		// TODO Auto-generated constructor stub
 		pLayerName = pName;
 		getMyPCAddr();
 		ResetHeader();
@@ -225,20 +221,12 @@ public class ARPLayer implements BaseLayer {
 			String target_IP = getDstAddrFromHeader(ARP_header_added_bytes);
 			_Cache_Entry cache_Entry = // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
 					new _Cache_Entry(new byte[6], "Incomplete", 80);
-			// Map의 put 메소드는 기본적으로 put의 인자로 전달받은 key(new)가 이전의 key(old)를 replace하게끔 구현되어 있다.
-			// 따라서 1.1.1.1을 Map에 put한 다음에, 1.1.1.1이 ttl로 삭제되기 이전에 1.1.1.1을 다시 Map에 put하면은,
-			// ttl이 초기화된다.
-			// 아래 if문은 new key가 old key를 대체하지 않게끔 중복체크하여 ttl이 초기화되는 일을 방지함.
+
 			if (!cache_Table.containsKey(target_IP))
 				cache_Table.put(target_IP, cache_Entry);
 
 			this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length); // Send Request Message
 		} else { // byte[]가 비어있지 않다 -> Send Reply Message
-
-			// if(AreMyPcIPAndPacketIPtheSame(input)) { //내 PC의 IP == 패킷의 target IP,
-			// Recv에서 isItMine으로 거르기 때문에 위 조건문은 필요 없다.
-
-			// setOPCode를 사용한 다음에는 ObjToByte를 사용해야 하는데, objToByte를 사용하면 길이가 +28된다.
 			for (int i = 0; i < 6; i++)
 				input[i + 18] = MY_MAC_ADDRESS.addr[i]; // 패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
 			input = swappingAddr(input); // src 주소 <-> target 주소 swapping
@@ -259,18 +247,6 @@ public class ARPLayer implements BaseLayer {
 		return true;
 	}
 
-//	public boolean IsItProxyMine(byte[] input) {
-//		_IP_ADDR newIP = new _IP_ADDR();
-//		for (int i = 0; i < 4; i++) {
-//			newIP.addr[i] = input[i + 24];
-//		}
-//		if (proxy_Table.containsKey(newIP.addr.toString()) == true) {
-//			return true;
-//		} else {
-//			return false;
-//		}
-//	}
-
 	// 10/25 수정: 같은 네트워크 상에서 ARP를 받아도 target이 자신이 아니면 캐시 테이블 업데이트는 하지 않는 것 같습니다.
 
 	public boolean Receive(byte[] input) {
@@ -286,9 +262,7 @@ public class ARPLayer implements BaseLayer {
 			} else if (isGratuitousARP(input)) {// Gratuitous ARP request 인 경우
 				updateCache(input);
 				return true;
-
 			} else {// basic ARP request 인 경우
-
 				if (Mine) {
 					updateCache(input);
 					Send(input, input.length);// 내 ip 주소로 온 ARP일 때만 reply
@@ -325,10 +299,6 @@ public class ARPLayer implements BaseLayer {
 
 	// Grat Send
 	public boolean GratSend(byte[] input, int length) {
-
-//		// EthernetLayer로 내 MAC주소 보내기
-//		((EthernetLayer) m_LayerMgr.GetLayer("Ethernet")).setMACAddr(MY_MAC_ADDRESS.addr);
-
 		// ARP헤더 초기 세팅
 		setARPHeaderBeforeSend();
 		// Sender's hardware address를 세팅,
@@ -515,7 +485,6 @@ public class ARPLayer implements BaseLayer {
 					}
 					Thread.sleep(2000);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -635,15 +604,6 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	private boolean IsItMine(byte[] input) {
-		// basic ARP Receive Request Message 시점에는 패킷의 destHdAddr이 ??임
-		// for (int i = 0; i < 6; i++) {
-		// if (MY_MAC_ADDRESS.addr[i] == input[i + 18])
-		// continue;//내 맥 주소 = destHdAddr인지 탐색
-		// else {
-		// return false;
-		// }
-		// }
-
 		for (int i = 0; i < 4; i++) {
 			if (MY_IP_ADDRESS.addr[i] == input[i + 24])
 				continue;// 내 IP 주소 = destProtoAddr인지 탐색
@@ -739,7 +699,6 @@ public class ARPLayer implements BaseLayer {
 
 	@Override
 	public void SetUnderLayer(BaseLayer pUnderLayer) {
-		// TODO Auto-generated method stub
 		if (pUnderLayer == null)
 			return;
 		this.p_UnderLayer = pUnderLayer;
@@ -747,7 +706,6 @@ public class ARPLayer implements BaseLayer {
 
 	@Override
 	public void SetUpperLayer(BaseLayer pUpperLayer) {
-		// TODO Auto-generated method stub
 		if (pUpperLayer == null)
 			return;
 		this.p_aUpperLayer.add(nUpperLayerCount++, pUpperLayer);
@@ -756,13 +714,11 @@ public class ARPLayer implements BaseLayer {
 
 	@Override
 	public String GetLayerName() {
-		// TODO Auto-generated method stub
 		return pLayerName;
 	}
 
 	@Override
 	public BaseLayer GetUnderLayer() {
-		// TODO Auto-generated method stub
 		if (p_UnderLayer == null)
 			return null;
 		return p_UnderLayer;
@@ -770,7 +726,6 @@ public class ARPLayer implements BaseLayer {
 
 	@Override
 	public BaseLayer GetUpperLayer(int nindex) {
-		// TODO Auto-generated method stub
 		if (nindex < 0 || nindex > nUpperLayerCount || nUpperLayerCount < 0)
 			return null;
 		return p_aUpperLayer.get(nindex);

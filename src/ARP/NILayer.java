@@ -36,8 +36,6 @@ public class NILayer implements BaseLayer {
 		int flags = Pcap.MODE_PROMISCUOUS; // capture all packets
 		int timeout = 10 * 1000; // 10 seconds in millis
 		m_AdapterObject = Pcap.openLive(m_pAdapterList.get(m_iNumAdapter).getName(), snaplen, flags, timeout, errbuf);
-		for(int i=0; i<m_pAdapterList.size(); i++)
-			System.out.println(m_pAdapterList.get(i));
 	}
 
 	public PcapIf GetAdapterObject(int iIndex) {
