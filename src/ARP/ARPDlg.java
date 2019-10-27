@@ -5,9 +5,11 @@ import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -96,7 +98,8 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.AddLayer(new ARPDlg("GUI"));
 
 		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) )");
-
+		((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(0);//PC마다 다르다. 0번이 아닐 수도 있기 때문에, 탐색하는 함수를 만들면 편할듯
+		
 		// 2초 마다 printCash()를 호출하여 캐시 테이블과 GUI를 갱신하는 쓰레드
 		Runnable task = () -> {
 			while (true) {
@@ -114,7 +117,24 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		Thread cacheUpdate = new Thread(task,"cacheUpdataThread");
 		cacheUpdate.start();
 	}
+	
+	//탐색하는 함수 실패작
+	public static int getMyPCNIC() throws SocketException {
+		Enumeration<NetworkInterface> interfaces = null;
+		interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
 
+		while (interfaces.hasMoreElements()) {
+			NetworkInterface networkInterface = interfaces.nextElement();
+			System.out.println(networkInterface);
+			if (networkInterface.isUp()) {
+				if (networkInterface.getHardwareAddress() != null) {// loop back Interface가 null이므로, 걸러준다.
+					System.out.println(networkInterface.getIndex());
+					return networkInterface.getIndex()-1;
+				}
+			}
+		}
+		return 0;
+	}
 	public static void printCash() {
 		// ARPLayer에서 만든 cache_Table을 가져온다. Sleep초 마다 갱신하는 셈.
 		cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
@@ -123,22 +143,19 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		proxy_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getProxyList();
 		
 		//디버깅
-		//System.out.println("CacheTable's Thread = " + Thread.currentThread());
 		System.out.println("CacheTable = " + cache_Table);
 		System.out.println("ARPModel = " + ARPModel);
 		//디버깅
 		for(String key2 : cache_Itr) 
 			System.out.println(key2 + "'s ttl = " + cache_Table.get(key2).cache_ttl);
 		
-		System.out.println(cache_Table.size() + " is cache's size ///// " + ARPModel.size() + " is ARPModel's size " + "-> different Sizes. I'm gonna refresh.");
+	//	System.out.println(cache_Table.size() + " is cache's size ///// " + ARPModel.size() + " is ARPModel's size " + "-> different Sizes. I'm gonna refresh.");
 		ARPModel.removeAllElements(); // ARPModel의 값을 모두 지우고,
 		for (String key : cache_Itr) { // 캐시테이블의 모든 값을 ARPModel에 저장하기 위해서 캐시테이블을 순회.
-			ARPModel.addElement(String.format("%20s%20s%15s", // 캐시테이블의 값 중 dstIPAddr(key), dstMACaddr, status를 아래 형식으로 ARPModel에 저장
+			ARPModel.addElement(String.format("%20s%25s%15s", // 캐시테이블의 값 중 dstIPAddr(key), dstMACaddr, status를 아래 형식으로 ARPModel에 저장
 					key, 														// key는 String이기 때문에 그대로 저장.
 					ethAddrToQuestionOrEth(cache_Table.get(key).cache_ethaddr), // ethAddr은 byte[]이기 때문에 ??? 혹은 xx:xx 형태의 String으로 변경해서 저장
 					cache_Table.get(key).cache_status));						// status는 String이기 때문에 그대로 저장
-		//	ArpArea.setModel(ARPModel);
-		//	ArpArea.updateUI();
 		}
 	}
 	
@@ -155,7 +172,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	 * ArpArea.setModel(ARPModel); } }
 	 */
 	 
-
 
 	public ARPDlg(String pName) {
 		pLayerName = pName;
@@ -213,7 +229,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		TextInputPanel.add(TextWrite);
 		TextWrite.setHorizontalAlignment(SwingConstants.CENTER);
 		TextWrite.setColumns(10);
-		TextWrite.setText("1.1.1.1");	//디버깅
+		TextWrite.setText("169.254.104.180");	//디버깅
 
 		ARP_Send_Button = new JButton("Send");
 		ARP_Send_Button.setBounds(260, 240, 80, 25);
@@ -273,7 +289,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		TextWrite2.setHorizontalAlignment(SwingConstants.CENTER);
 		TextWrite2.setColumns(10);
 	
-
 		Grat_Send_Button = new JButton("Send");
 		Grat_Send_Button.setBounds(260, 23, 80, 25);
 		Grat_Send_Button.addActionListener(new setAddressListener());
@@ -315,7 +330,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 			if (e.getSource() == ARP_Send_Button) {
 				if (isValidIPv4Addr(TextWrite.getText())) { // 올바른 IP주소 형식이 입력되었다면,
 					((ARPLayer) m_LayerMgr.GetLayer("ARP")).setDstIPAddr(strToByteArray(TextWrite.getText())); // ARpLayer에 dstAddr Set
-					((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(0);
 					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send("".getBytes(), 0); // Send 시작
 				} else {
 					System.out.println("올바른 IP주소를 입력하시오");
@@ -371,9 +385,11 @@ public class ARPDlg extends JFrame implements BaseLayer {
 			}
 			// 하단 버튼 이벤트
 			if (e.getSource() == Bottom_Exit_Button) {
+				System.exit(0);
 				dispose();
 			}
 			if (e.getSource() == Bottom_Cancel_Button) {
+				System.exit(0);
 				dispose();
 			}
 		}
@@ -406,7 +422,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	//byte[]가 0.0.0 이면 ??? String으로 바꿔서 리턴, 0.0.0.이 아니면 정상적인 ethAddr이다. 이 ethAddr을 xx:xx:xx의 String으로 바꿔서 리턴. (GUI에 출력하기 위함)
 	public static String ethAddrToQuestionOrEth(byte[] input) {
 		if(isThisQuestion(input)) { // byte[]가 0000..이다 -> Question mark로 출력
-			return "??????????????";
+			return "???????????";
 		}
 		else {						// byte[]가 정상적인 ethAddr 형식이다 -> String으로 바꿔서 출력.
 			return byteArrayToString(input);
@@ -424,7 +440,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	public static String byteArrayToString(byte[] b) {	// byte[0] = 1, byte[1] = 2 일 때... 01:02 String으로 변경
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < b.length; ++i) {	
-        	sb.append(String.format("%02d", b[i] ));	// sb에 바이트를 str으로 바꿔서 저장한다. 이 때  1은 01, 2는 02 등 두 글자로 formatting
+        	sb.append(String.format("%02X", b[i] ));	// sb에 바이트를 str으로 바꿔서 저장한다. 이 때  1은 01, 2는 02 등 두 글자로 formatting
             sb.append(":");								
         }
         sb.deleteCharAt(sb.length()-1);	// 마지막에 추가된 :를 지운다
