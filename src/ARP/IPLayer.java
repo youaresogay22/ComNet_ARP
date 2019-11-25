@@ -1,7 +1,13 @@
 package ARP;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
+
+import static ARP.EthernetLayer.byte4To2;
+import static ARP.EthernetLayer.intToByte;
 
 public class IPLayer implements BaseLayer {
 	public int nUpperLayerCount = 0;
@@ -9,14 +15,100 @@ public class IPLayer implements BaseLayer {
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 
-	private class _IP_ADDR {
-		private byte[] addr = new byte[4];
+	// router additional implementation
+
+	// map은 중복되는 key를 허용하지 않으므로 다른 자료구조를 찾아봐야 할 것 같습니다.
+	public Map<byte[], _Routing_Entry> routing_Table = new LinkedHashMap<byte[], _Routing_Entry>();
+	public Set<byte[]> routing_Table_Itr = routing_Table.keySet();
+
+	// router: _IP_ADDR class moved from ARPlayer to IPlayer
+	public static class _IP_ADDR {
+		public byte[] addr = new byte[4];
 
 		public _IP_ADDR() {
 			this.addr[0] = (byte) 0x00;
 			this.addr[1] = (byte) 0x00;
 			this.addr[2] = (byte) 0x00;
 			this.addr[3] = (byte) 0x00;
+		}
+
+		// 10/25 추가:_IP_ADDR toString 시 이제 1.1.1.1 꼴의 스트링을 반환합니다
+		@Override
+		public String toString() {
+			String ipString = "";
+			for (byte b : this.addr) {
+				ipString += Integer.toString(b & 0xFF) + ".";
+			}
+			return ipString.substring(0, ipString.length() - 1);
+		}
+
+		// ip byte끼리의 and 연산 함수
+		public byte[] do_And_operation(byte[] sourceIP) {
+			byte[] temp = new byte[4];
+			for (int i = 0; i < temp.length; i++) {
+				temp[i] = (byte) (temp[i] & sourceIP[i]);
+			}
+			return temp;
+		}
+	}
+
+	// router additional implementation
+	private class _Routing_Entry {
+		public _IP_ADDR getSubnetMask() {
+			return subnetMask;
+		}
+
+		public void setSubnetMask(_IP_ADDR subnetMask) {
+			this.subnetMask = subnetMask;
+		}
+
+		public String getGateway() {
+			return gateway;
+		}
+
+		public void setGateway(String gateway) {
+			this.gateway = gateway;
+		}
+
+		public boolean isFlag_Up() {
+			return flag_Up;
+		}
+
+		public void setFlag_Up(boolean flag_Up) {
+			this.flag_Up = flag_Up;
+		}
+
+		public boolean isFlag_Gateway() {
+			return flag_Gateway;
+		}
+
+		public void setFlag_Gateway(boolean flag_Gateway) {
+			this.flag_Gateway = flag_Gateway;
+		}
+
+		public int getRoute_Interface() {
+			return route_Interface;
+		}
+
+		public void setRoute_Interface(int route_Interface) {
+			this.route_Interface = route_Interface;
+		}
+
+		private _IP_ADDR subnetMask;
+		private String gateway;
+		private boolean flag_Up; // U flag
+		private boolean flag_Gateway; // G flag
+		private int route_Interface;
+
+		public _Routing_Entry(byte[] input_subnetMask, String input_gateway, boolean input_flag_Up,
+				boolean input_flag_Gateway, int input_route_Interface) {
+			for (int i = 0; i < input_subnetMask.length; i++) {
+				this.subnetMask.addr[i] = input_subnetMask[i];
+			}
+			this.gateway = input_gateway;
+			this.flag_Up = input_flag_Up;
+			this.flag_Gateway = input_flag_Gateway;
+			this.route_Interface = input_route_Interface;
 		}
 	}
 
@@ -38,7 +130,7 @@ public class IPLayer implements BaseLayer {
 			this.ip_tos = (byte) 0x00; // 1
 			this.ip_len = new byte[2]; // 2-3
 			this.ip_id = new byte[2]; // 4-5
-			this.ip_fragoff = new byte[2]; //6-7
+			this.ip_fragoff = new byte[2]; // 6-7
 			this.ip_ttl = (byte) 0x00; // 8
 			this.ip_proto = (byte) 0x00; // 9
 			this.ip_cksum = new byte[2]; // 10-11
@@ -50,12 +142,27 @@ public class IPLayer implements BaseLayer {
 
 	_IP_HEADER m_iHeader = new _IP_HEADER();
 
+	// routing table에 add하는 함수
+	public void addRoutingEntry(byte[] input_destAddress, byte[] input_subnetMask, String input_gateway,
+			boolean input_flag_Up, boolean input_flag_Gateway, int input_route_Interface) {
+
+		_Routing_Entry additional = new _Routing_Entry(input_subnetMask, input_gateway, input_flag_Up,
+				input_flag_Gateway, input_route_Interface);
+
+		routing_Table.put(input_destAddress, additional);
+		// sort()
+	}
+
+	public void sort() {
+		// routing table sorting 함수
+	}
+
 	public void setSrcAddr(String ip) {
 		StringTokenizer st = new StringTokenizer(ip, ".");
 
 		for (int i = 0; i < 4; i++) {
 			m_iHeader.ip_src.addr[i] = (byte) Integer.parseInt(st.nextToken());
-		}//인코딩
+		} // 인코딩
 	}
 
 	public void setDstAddr(String ip) {
@@ -113,12 +220,13 @@ public class IPLayer implements BaseLayer {
 	}
 
 	public boolean Send(byte[] input, int length) {
-		//send 내에 구현사항을 많이 넣으면 가독성이 떨어져서 ObjToByte로 분리했습니다.
+		// send 내에 구현사항을 많이 넣으면 가독성이 떨어져서 ObjToByte로 분리했습니다.
 		byte[] IP_header_added_bytes = ObjToByte(m_iHeader, input, length);
 
 		this.GetUnderLayer().Send(IP_header_added_bytes, IP_header_added_bytes.length);
 		return false;
 	}
+
 	public boolean GratSend(byte[] input, int length) {
 		byte[] TCP_header_added_bytes = ObjToByte(m_iHeader, input, length);
 
@@ -126,15 +234,26 @@ public class IPLayer implements BaseLayer {
 		return false;
 	}
 
-	public boolean Send(String filename) {
-		return false;
+	public byte[] arrangeIPHeader(byte[] input, int length) {
+		// IP header 제거하지 않고 목적지와 발신지만 수정
+		return null;
 	}
 
 	public boolean Receive(byte[] input) {
+		byte[] data;
+		// routing table 탐색 후
+		// 맞는 interface로 전송
+		// arrangeIPHeader(input)
 		return false;
 	}
 
 	public boolean Receive() {
+		// baselayer 기본 함수, 쓸 일 없을 듯
+		return false;
+	}
+
+	public boolean Send(String filename) {
+		// baselayer 기본 함수, 쓸 일 없을 듯
 		return false;
 	}
 

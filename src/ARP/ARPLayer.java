@@ -10,6 +10,7 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import static ARP.EthernetLayer.byte4To2;
 import static ARP.EthernetLayer.intToByte;
+import static ARP.IPLayer._IP_ADDR;
 
 public class ARPLayer implements BaseLayer {
 	public int nUpperLayerCount = 0;
@@ -44,27 +45,6 @@ public class ARPLayer implements BaseLayer {
 		public _Proxy_Entry(byte[] ethaddr, String device) {
 			proxy_ethaddr = ethaddr;
 			proxy_device = device;
-		}
-	}
-
-	private class _IP_ADDR {
-		private byte[] addr = new byte[4];
-
-		public _IP_ADDR() {
-			this.addr[0] = (byte) 0x00;
-			this.addr[1] = (byte) 0x00;
-			this.addr[2] = (byte) 0x00;
-			this.addr[3] = (byte) 0x00;
-		}
-
-		// 10/25 추가:_IP_ADDR toString 시 이제 1.1.1.1 꼴의 스트링을 반환합니다
-		@Override
-		public String toString() {
-			String ipString = "";
-			for (byte b : this.addr) {
-				ipString += Integer.toString(b & 0xFF) + ".";
-			}
-			return ipString.substring(0, ipString.length() - 1);
 		}
 	}
 
