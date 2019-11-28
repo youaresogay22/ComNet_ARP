@@ -22,6 +22,8 @@ public class IPLayer implements BaseLayer {
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 	
+	RoutingTable[] routingTable;	// 라우팅테이블
+	
 	// router additional implementation
 
 	// map은 중복되는 key를 허용하지 않으므로 다른 자료구조를 찾아봐야 할 것 같습니다.
@@ -343,10 +345,39 @@ public class IPLayer implements BaseLayer {
 	}
 
 	public boolean Receive(byte[] input) {
-		byte[] data;
 		// routing table 탐색 후
 		// 맞는 interface로 전송
 		// arrangeIPHeader(input)
+				
+		byte[] data;
+		data = new byte[input.length];
+		System.arraycopy(input, 0, data, 0, input.length);
+				
+		byte[] dstAddr = new byte[4];	// input의 목적주소만 빼서 따로 저장
+		dstAddr[0] = input[16];
+		dstAddr[1] = input[17];
+		dstAddr[2] = input[18];
+		dstAddr[3] = input[19];
+		
+		for (int i=0; i<10; i++) {	// Routing Table 검색을 위한 for문, Routing 테이블 한줄한줄 읽기
+									// * 임시로 i<10 넣어둠, 수정해야함
+			
+			// rt_dstAddr에 RoutingTable의 모든 Destination Address 저장
+			byte[] rt_dstAddr = routingTable[i].getDstAddr();
+			
+			// rt_subnetMask에 RoutingTable의 모든 Subnet mask 저장
+			for (int j=0; j<4; j++) {
+				byte[] rt_subnetMask = routingTable[j].getSubnetMask();
+				
+				// input의 목적주소와 Routing Table의 서브넷 마스크를 연산하여
+				// 같으면 IPLayer1의 하위 레이어로 보내고 다르면 IPLayer2의 하위 레이어로 보냄
+				if (rt_dstAddr[j] == (dstAddr[j] & rt_subnetMask[j])) {
+					
+				} else {
+					
+				}
+			}
+		}
 		return false;
 	}
 
