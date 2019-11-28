@@ -2,12 +2,13 @@ package ARP;
 
 public class RoutingTable {
 	
-	private byte[] RT_dstAddr;		// Destination address
+	private byte[] RT_dstAddr;			// Destination address
 	private byte[] RT_subnetMask;		// Subnet Mask
 	private String RT_gateway;			// Gateway, 연결(*) 표시를 위해 String
 	private boolean RT_flag_Up;			// Flag U
 	private boolean RT_flag_Gateway;	// Flag UG
 	private int RT_Interface;			// Interface
+//	private int RT_Class;				// Subnet 클래스 구분, 필요하면 추가
 	
 	public RoutingTable() {
 		
@@ -28,6 +29,17 @@ public class RoutingTable {
 		RT_flag_Up = flag_Up;
 		RT_flag_Gateway = flag_Gateway;
 		RT_Interface = Interface;
+		
+//		// Subnet 클래스 구분하는 if문, 필요하면 추가
+//		if (subnetMask[0]!=0x00) {			// 255.255.255.255
+//			RT_Class = 0;
+//		} else if (subnetMask[1]!=0x00) {	// 255.255.255.0 : Class C
+//			RT_Class = 1;
+//		} else if (subnetMask[2]!=0x00) {	// 255.255.0.0 : Class B
+//			RT_Class = 2;
+//		} else if (subnetMask[3]!=0x00) {	// 255.0.0.0 : Class A
+//			RT_Class = 3;
+//		}
 		
 	}
 	
