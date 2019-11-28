@@ -22,14 +22,12 @@ public class RoutingTable {
 	// Routing table에 add하는 함수
 	public void addRoutingEntry(byte[] dstAddr, byte[] subnetMask, String gateway, boolean flag_Up, boolean flag_Gateway, int Interface) {
 
-		RoutingTable rt = null;
-		
-		rt.RT_dstAddr = dstAddr;
-		rt.RT_subnetMask = subnetMask;
-		rt.RT_gateway = gateway;
-		rt.RT_flag_Up = flag_Up;
-		rt.RT_flag_Gateway = flag_Gateway;
-		rt.RT_Interface = Interface;
+		RT_dstAddr = dstAddr;
+		RT_subnetMask = subnetMask;
+		RT_gateway = gateway;
+		RT_flag_Up = flag_Up;
+		RT_flag_Gateway = flag_Gateway;
+		RT_Interface = Interface;
 		
 	}
 	
