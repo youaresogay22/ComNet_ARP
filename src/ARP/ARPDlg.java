@@ -2,34 +2,38 @@ package ARP;
 
 import java.awt.Color;
 import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.net.InetAddress;
+import java.net.Inet4Address;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
-import javax.swing.UIManager;
-import javax.swing.border.BevelBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 
 import ARP.ARPLayer._Cache_Entry;
 import ARP.ARPLayer._Proxy_Entry;
+import ARP.IPLayer._Routing_Entry;
+
+
+// CheckOne (subnet 구하는 함수) 메커니즘이 잘못된 듯.
+// ARP cache Table을 쓰레드 없이 갱신할 수 있나? (TTL때문)
 
 @SuppressWarnings("serial")
 public class ARPDlg extends JFrame implements BaseLayer {
@@ -38,55 +42,52 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
-	BaseLayer UnderLayer;
-
 	private static LayerManager m_LayerMgr = new LayerManager();
-	static _Proxy_Entry proxyEntry;
-	static Map<String, _Cache_Entry> cache_Table;
+	
+	static Set<String> routing_Table_Itr;
 	static Set<String> cache_Itr;
+	static Map<String, _Cache_Entry> cache_Table;
 	static Map<String, _Proxy_Entry> proxy_Table;
-	static ArrayList<byte[]> byteArray = new ArrayList<byte[]>();
+	static Map<String, _Routing_Entry> routing_Table; 
 
-	private JTextField TextWrite; // 좌측 "IP주소"
-	private JTextField TextWrite2; // 우측 "H/W주소"
-	private JTextField TextWrite3; // 팝업 창 "IP주소"
-	private JTextField TextWrite4; // 팝업 창 "Ethernet주소"
+	JTextField TextWrite3; // 팝업 창 "IP주소"
+	JTextField TextWrite4; // 팝업 창 "Ethernet주소"
+	JTextField TextWrite5; // routing pop, "Destination"
+	JTextField TextWrite6; // routing pop, "Netmask"
+	JTextField TextWrite7; // routing pop, "Gateway"
 
-	JPanel TextInputPanel; // 좌측 "IP주소"
-	JPanel TextInputPanel2; // 우측 "H/W주소"
-	JPanel TextInputPanel3; // 팝업 창 "IP주소"
-	JPanel TextInputPanel4; // 팝업 창 "Ethernet주소"
-	JComboBox<String> DeviceComboBox; // 팝업 창 "Device" 콤보박스
+	JComboBox<String> cBoxDevice; 	 // proxy popup, "Device" 콤보박스
+	JComboBox<String> cBoxInterface; // routing popup, "Interface" 콤보박스
+	
+	JCheckBox checkUp;
+	JCheckBox checkGate;
+	JCheckBox checkHost;
+	
+	JFrame routingPopupFrame;
+	JFrame proxyPopupFrame; // 프록시 add버튼 클릭 시 나타나는 팝업 창
+	
+	static JTable routingTable;
+	static JTable ARPTable;
+	static JTable proxyTable;
 
-	Container contentPane; // 메인 콘테이너
-	Container contentPane2; // 팝업 창 콘테이너
+	JButton routingAddBtn;
+	JButton routingDeleteBtn;
+	JButton routingPopAddBtn;
+	JButton routingPopCancelBtn;
+	JButton ARPDeleteBtn;
+	JButton proxyAddBtn; 		
+	JButton proxyDeleteBtn; 	
+	JButton proxyPopOkBtn; 		
+	JButton proxyPopCancelBtn;		
 
-	static DefaultListModel<String> ARPModel; // JList의 Item들을 관리하는 모델
-	static DefaultListModel<String> ProxyModel;
-	JFrame PopUpFrame; // 프록시 add버튼 클릭 시 나타나는 팝업 창
-
-	static JList<String> ArpArea; // 좌측 ARP 텍스트 출력란
-	JList<String> ProxyArea; // 우측 Proxy 텍스트 출력란
-	JTextArea srcAddress; // 근원지 주소
-	JTextArea dstAddress; // 도착지 주소
-
-	JLabel lblIP; // 좌측 3층 "IP주소"
-	JLabel lblHW; // 우측 3층 "H/W주소"
-	JLabel lblDevice; // 팝업 창 "Device" 라벨
-	JLabel lblPopUpIP; // 팝업 창 "IP주소" 라벨
-	JLabel lblEthernet; // 팝업 창 "Ethernet 주소" 라벨
-
-	JButton Item_Delete_Button; // 좌측 "Item Delete" 버튼
-	JButton All_Delete_Button; // 좌측 "All Delete" 버튼
-	JButton Proxy_Add_Button; // 우측 "Add" 버튼
-	JButton Proxy_Delete_Button; // 우측 "Delete" 버튼
-	JButton ARP_Send_Button; // 좌측 "Send" 버튼
-	JButton Grat_Send_Button; // 우측 "Send" 버튼
-	JButton Bottom_Exit_Button; // 하단 "종료"버튼
-	JButton Bottom_Cancel_Button; // 하단 "취소"버튼
-	JButton Proxy_OK_Button; // 팝업 다이얼로그 "OK"버튼
-	JButton Proxy_Cancel_Button;// 팝업 다이얼로그 "Cancel"버튼
-
+	// JTable에 쓰이는 변수들
+	String[] routingColumn = {"Destination", "NetMask", "Gateway","Flag","Interface","Metric"};
+	String[] ARPColumn = {"IP Address", "Ethernet Address", "Status"};
+	String[] proxyColumn = {"IP Address", "Ethernet Address", "Interface"};
+	Object[][] routingData = {};
+	Object[][] ARPData = {};
+	Object[][] proxyData = {};
+	
 	public static void main(String[] args) throws SocketException {
 		m_LayerMgr.AddLayer(new NILayer("NI"));
 		m_LayerMgr.AddLayer(new EthernetLayer("ETHERNET"));
@@ -109,252 +110,451 @@ public class ARPDlg extends JFrame implements BaseLayer {
 				printCache(); // GUI에 cache_Table을 print
 			}
 		};
-		// 위 기능을 수행하는 쓰레드 생성 및 시작.
+		//위 기능을 수행하는 쓰레드 생성 및 시작.
 		Thread cacheUpdate = new Thread(task,"cacheUpdataThread");
 		cacheUpdate.start();
+		
+		//프로그램 구동 초기에 null을 참조해서 에러나는 경우를 방지하기 위해 초기화
+		proxy_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getProxyList();
+		routing_Table = ((IPLayer) m_LayerMgr.GetLayer("IP")).getRoutingList();
 	}
 	
+	//1.TTL로 제거되는 ARP Cache entry를 GUI에 실시간으로 반영해야 한다. 
+	//2.이를 위해 Sleep초 마다 ARPLayer에서 자료구조(new)를 가져온다.
+	//3.GUI에 출력되어 있는 entry(old)를 삭제한 뒤, 새로 가져온 자료구조를 GUI에 출력한다.
 	public static void printCache() {
-		// ARPLayer에서 만든 cache_Table을 가져온다. Sleep초 마다 갱신하는 셈.
+		//old -> new
 		cache_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getCacheList();
 		cache_Itr = cache_Table.keySet();
 		
-		proxy_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getProxyList();
+		//GUI에서 삭제 (ARP)
+		DefaultTableModel arpModel = (DefaultTableModel) ARPTable.getModel();
+		int rowCount = arpModel.getRowCount();
+		for(int i=rowCount - 1 ; i >= 0; i--)
+			arpModel.removeRow(i);
 		
-		ARPModel.removeAllElements(); // ARPModel의 값을 모두 지우고,
-		for (String key : cache_Itr) { // 캐시테이블의 모든 값을 ARPModel에 저장하기 위해서 캐시테이블을 순회.
-			ARPModel.addElement(String.format("%20s%25s%15s", // 캐시테이블의 값 중 dstIPAddr(key), dstMACaddr, status를 아래 형식으로 ARPModel에 저장
-					key, 														// key는 String이기 때문에 그대로 저장.
-					ethAddrToQuestionOrEth(cache_Table.get(key).cache_ethaddr), // ethAddr은 byte[]이기 때문에 ??? 혹은 xx:xx 형태의 String으로 변경해서 저장
-					cache_Table.get(key).cache_status));						// status는 String이기 때문에 그대로 저장
+		//GUI에 출력 (ARP)
+		for(String key : cache_Itr) {
+			Object[] data = {
+					key,																//IP Address
+					byteArrayToQuestionOrEth(cache_Table.get(key).cache_ethaddr),		//Ethernet Address
+					cache_Table.get(key).cache_status									//Status
+			};
+			arpModel.addRow(data);				
 		}
 	}
 	
-	 
 	public ARPDlg(String pName) {
 		pLayerName = pName;
 
 		setTitle("TestARP");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(250, 250, 748, 380);
-		contentPane = new JPanel();
-		((JComponent) contentPane).setBorder(new EmptyBorder(5, 5, 5, 5));
+		setBounds(180, 180, 850, 420);
+		Container contentPane = new JPanel();
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
+		
+		////////////////////// 좌측 Routing Table ***********************************************
+		JPanel routingPanel = new JPanel();
+		//routingPanel.setBorder(new LineBorder(Color.RED));
+		routingPanel.setBounds(5,5,450,380);
+		contentPane.add(routingPanel);
+		
+		JTextArea routingTitle = new JTextArea("Static Routing Table");
+		routingTitle.setBackground(null);
+		routingTitle.setFont(new Font("Serif", Font.BOLD, 20));
+		routingTitle.setBounds(100, 4, 160, 30);
+		routingTitle.setEditable(false);												// 수정 불가
+		routingTitle.setHighlighter(null);												// 드래그 불가
+		routingPanel.add(routingTitle);
+		
+		routingTable = new JTable(makeDefaultTableModel(routingData,routingColumn));
+		DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();		// JTable 가운데 정렬
+		centerRenderer.setHorizontalAlignment( SwingConstants.CENTER );					// JTable 가운데 정렬
+		routingTable.setDefaultRenderer(Object.class, centerRenderer);					// JTable 가운데 정렬
+		routingTable.setShowGrid(false);												// JTable 내 경계선 제거
+		routingTable.setFillsViewportHeight(true);										// JTable 내 data가 비어있더라도 size 만큼 가득 채워서 보여줌
+		
+		routingTable.getColumnModel().getColumn(0).setPreferredWidth(95);				// Destination size
+		routingTable.getColumnModel().getColumn(1).setPreferredWidth(95);				// NetMask
+		routingTable.getColumnModel().getColumn(2).setPreferredWidth(95);				// Gateway
+		routingTable.getColumnModel().getColumn(3).setPreferredWidth(40);				// Flag
+		routingTable.getColumnModel().getColumn(4).setPreferredWidth(70);				// Interface
+		routingTable.getColumnModel().getColumn(5).setPreferredWidth(40);				// Metric
+		
+		JScrollPane routingScrollPane = new JScrollPane(routingTable);
+		routingScrollPane.setPreferredSize(new Dimension(445,285));						// JScrollPane 크기 지정
+		routingPanel.add(routingScrollPane);
+		
+		routingAddBtn = new JButton("Add");
+		routingAddBtn.setBounds(50, 130, 110, 25);
+		routingAddBtn.addActionListener(new setAddressListener());
+		routingPanel.add(routingAddBtn);
 
-		////////////////////// 좌측 1층
+		routingDeleteBtn = new JButton("Delete");
+		routingDeleteBtn.setBounds(190, 130, 110, 25);
+		routingDeleteBtn.addActionListener(new setAddressListener());
+		routingPanel.add(routingDeleteBtn);
+		
+		////////////////////// 우측 ARP ********************************************
 		JPanel ARPPanel = new JPanel();
-		ARPPanel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "ARP Cache",
-				TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-		ARPPanel.setBounds(10, 5, 355, 276);
+		//ARPPanel.setBorder(new LineBorder(Color.RED));
+		ARPPanel.setBounds(470, 5, 355, 190);
 		contentPane.add(ARPPanel);
-		ARPPanel.setLayout(null);
+		
+		JTextArea ARPTitle = new JTextArea("ARP Cache Table");
+		ARPTitle.setBackground(null);
+		ARPTitle.setFont(new Font("Serif",Font.BOLD, 20));
+		ARPTitle.setBounds(100, 4, 160, 30);
+		ARPTitle.setEditable(false);												// 수정 불가
+		ARPTitle.setHighlighter(null);												// 드래그 불가
+		ARPPanel.add(ARPTitle);
 
-		JPanel chattingEditorPanel = new JPanel();
-		chattingEditorPanel.setBounds(10, 15, 340, 180);
-		ARPPanel.add(chattingEditorPanel);
-		chattingEditorPanel.setLayout(null);
+		ARPTable = new JTable(makeDefaultTableModel(ARPData,ARPColumn));
+		ARPTable.setDefaultRenderer(Object.class, centerRenderer);					// JTable 가운데 정렬
+		ARPTable.setShowGrid(false);												// JTable 내 경계선 제거
+		ARPTable.setFillsViewportHeight(true);										// JTable 내 data가 비어있더라도 size 만큼 가득 채워서 보여줌
+		
+		ARPTable.getColumnModel().getColumn(0).setPreferredWidth(100);				// IP Address size
+		ARPTable.getColumnModel().getColumn(1).setPreferredWidth(140);				// Ethernet Address
+		ARPTable.getColumnModel().getColumn(2).setPreferredWidth(105);				// Status
 
-		ARPModel = new DefaultListModel<String>();
-		ArpArea = new JList<String>(ARPModel);
-		ArpArea.setBounds(0, 0, 340, 180);
-		chattingEditorPanel.add(ArpArea);
+		JScrollPane ARPScrollPane = new JScrollPane(ARPTable);
+		ARPScrollPane.setPreferredSize(new Dimension(345,100));						// JScrollPane 크기 지정
+		ARPPanel.add(ARPScrollPane);
 
-		////////////////////// 좌측 2층
-		Item_Delete_Button = new JButton("Item Delete");
-		Item_Delete_Button.setBounds(50, 205, 120, 25);
-		Item_Delete_Button.addActionListener(new setAddressListener());
-		ARPPanel.add(Item_Delete_Button);
+		ARPDeleteBtn = new JButton("Delete");
+		ARPDeleteBtn.setBounds(115, 130, 110, 25);
+		ARPDeleteBtn.addActionListener(new setAddressListener());
+		ARPPanel.add(ARPDeleteBtn);
 
-		All_Delete_Button = new JButton("All Delete");
-		All_Delete_Button.setBounds(190, 205, 120, 25);
-		All_Delete_Button.addActionListener(new setAddressListener());
-		ARPPanel.add(All_Delete_Button);
+		/////////////////// 우측  PROXY ************************************************************************************
+		JPanel ProxyPanel = new JPanel();
+		//ProxyPanel.setBorder(new LineBorder(Color.RED));
+		ProxyPanel.setBounds(470, 190, 355, 190);
+		contentPane.add(ProxyPanel);
+		
+		JTextArea proxyTitle = new JTextArea("Proxy ARP Table");
+		proxyTitle.setBackground(null);
+		proxyTitle.setFont(new Font("Serif",Font.BOLD, 20));
+		proxyTitle.setEditable(false);												// 수정 불가
+		proxyTitle.setHighlighter(null);											// 드래그 불가
+		proxyTitle.setBounds(100, 4, 160, 30);
+		ProxyPanel.add(proxyTitle);
+		
+		proxyTable = new JTable(makeDefaultTableModel(proxyData,proxyColumn));
+		proxyTable.setDefaultRenderer(Object.class, centerRenderer);				// JTable 가운데 정렬			
+		proxyTable.setShowGrid(false);												// JTable 내 경계선 제거
+		proxyTable.setFillsViewportHeight(true); 									// JTable 내 data가 비어있더라도 size 만큼 가득 채워서 보여줌
+		
+		proxyTable.getColumnModel().getColumn(0).setPreferredWidth(105);			// IP Address size
+		proxyTable.getColumnModel().getColumn(1).setPreferredWidth(160);			// Ethernet Address
+		proxyTable.getColumnModel().getColumn(2).setPreferredWidth(80);				// Interface
+		
+		JScrollPane proxyScrollPane = new JScrollPane(proxyTable);
+		proxyScrollPane.setPreferredSize(new Dimension(345,100));					// JScrollPane 크기 지정
+		ProxyPanel.add(proxyScrollPane);
 
-		////////////////////// 좌측 3층
-		lblIP = new JLabel("IP주소");
-		lblIP.setBounds(20, 240, 80, 25);
-		ARPPanel.add(lblIP);
+		proxyAddBtn = new JButton("Add");
+		proxyAddBtn.setBounds(50, 130, 110, 25);
+		proxyAddBtn.addActionListener(new setAddressListener());
+		ProxyPanel.add(proxyAddBtn);
 
-		TextInputPanel = new JPanel();
-		TextInputPanel.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
-		TextInputPanel.setBounds(70, 240, 180, 25);
-		ARPPanel.add(TextInputPanel);
-		TextInputPanel.setLayout(null);
-
-		TextWrite = new JTextField();
-		TextWrite.setBounds(2, 2, 180, 25);// 249
-		TextInputPanel.add(TextWrite);
-		TextWrite.setHorizontalAlignment(SwingConstants.CENTER);
-		TextWrite.setColumns(10);
-		TextWrite.setText("169.254.104.180");	//디버깅
-
-		ARP_Send_Button = new JButton("Send");
-		ARP_Send_Button.setBounds(260, 240, 80, 25);
-		ARP_Send_Button.addActionListener(new setAddressListener());
-		ARPPanel.add(ARP_Send_Button);
-
-		/////////////////// 우측 1층
-		JPanel settingPanel = new JPanel();
-		settingPanel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Proxy ARP Entry",
-				TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-		settingPanel.setBounds(370, 5, 355, 215);
-		contentPane.add(settingPanel);
-		settingPanel.setLayout(null);
-
-		JPanel proxyEditorPanel = new JPanel();
-		proxyEditorPanel.setBounds(5, 20, 345, 150);
-		settingPanel.add(proxyEditorPanel);
-		proxyEditorPanel.setLayout(null);
-
-		ProxyModel = new DefaultListModel<String>();
-		ProxyArea = new JList<String>(ProxyModel);
-		ProxyArea.setBounds(0, 0, 345, 150);
-		proxyEditorPanel.add(ProxyArea);
-
-		///////////////////// 우측 2층
-		Proxy_Add_Button = new JButton("Add");
-		Proxy_Add_Button.setBounds(50, 180, 120, 25);
-		Proxy_Add_Button.addActionListener(new setAddressListener());
-		settingPanel.add(Proxy_Add_Button);
-
-		Proxy_Delete_Button = new JButton("Delete");
-		Proxy_Delete_Button.setBounds(190, 180, 120, 25);
-		Proxy_Delete_Button.addActionListener(new setAddressListener());
-		settingPanel.add(Proxy_Delete_Button);
-
-		////////////////////// 우측 3층
-		JPanel GratuitousPanel = new JPanel();
-		GratuitousPanel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Gratuitous ARP",
-				TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-		GratuitousPanel.setBounds(370, 220, 355, 60);
-		contentPane.add(GratuitousPanel);
-		GratuitousPanel.setLayout(null);
-
-		lblHW = new JLabel("H/W주소");
-		lblHW.setBounds(15, 23, 60, 25);
-		GratuitousPanel.add(lblHW);
-
-		TextInputPanel2 = new JPanel();
-		TextInputPanel2.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
-		TextInputPanel2.setBounds(70, 23, 180, 25);
-		GratuitousPanel.add(TextInputPanel2);
-		TextInputPanel2.setLayout(null);
-
-		TextWrite2 = new JTextField();
-		TextWrite2.setBounds(0, 0, 180, 25);// 249
-		TextInputPanel2.add(TextWrite2);
-		TextWrite2.setHorizontalAlignment(SwingConstants.CENTER);
-		TextWrite2.setColumns(10);
-	
-		Grat_Send_Button = new JButton("Send");
-		Grat_Send_Button.setBounds(260, 23, 80, 25);
-		Grat_Send_Button.addActionListener(new setAddressListener());
-		GratuitousPanel.add(Grat_Send_Button);
-
-		///////////////////////// 하단
-		Bottom_Exit_Button = new JButton("종료");
-		Bottom_Exit_Button.setBounds(263, 290, 100, 25);
-		Bottom_Exit_Button.addActionListener(new setAddressListener());
-		contentPane.add(Bottom_Exit_Button);
-
-		Bottom_Cancel_Button = new JButton("취소");
-		Bottom_Cancel_Button.setBounds(370, 290, 100, 25);
-		Bottom_Cancel_Button.addActionListener(new setAddressListener());
-		contentPane.add(Bottom_Cancel_Button);
+		proxyDeleteBtn= new JButton("Delete");
+		proxyDeleteBtn.setBounds(190, 130, 110, 25);
+		proxyDeleteBtn.addActionListener(new setAddressListener());
+		ProxyPanel.add(proxyDeleteBtn);
 
 		setVisible(true);
 	}
 
-	///////////////// 버튼 클릭 이벤트
+	// proxy add 팝업창 GUI
+	public void proxyPopup() {
+		proxyPopupFrame = new JFrame("Proxy ARP Entry 추가");
+		proxyPopupFrame.setBounds(200, 200, 300, 220);
+		proxyPopupFrame.setLayout(null);
+		proxyPopupFrame.setVisible(true);
+
+		// "Device" 라벨과 콤보박스
+		JLabel lblDevice = new JLabel("Device");
+		lblDevice.setBounds(47, 10, 60, 25);
+		proxyPopupFrame.add(lblDevice);
+
+		String[] str = { "Host B", "Host C" };
+
+		cBoxDevice = new JComboBox<>(str);
+		cBoxDevice.setBounds(90, 10, 150, 25);
+		cBoxDevice.addActionListener(new setAddressListener());
+		((JLabel) cBoxDevice.getRenderer()).setHorizontalAlignment(SwingConstants.CENTER); // 텍스트를 가운데로 정렬하는 코드
+		proxyPopupFrame.add(cBoxDevice);
+
+		// "IP주소" 라벨과 텍스트 입력 창
+		JLabel lblPopUpIP = new JLabel("IP주소");
+		lblPopUpIP.setBounds(47, 50, 60, 25);
+		proxyPopupFrame.add(lblPopUpIP);
+
+		TextWrite3 = new JTextField();
+		TextWrite3.setBounds(90, 50, 150, 25);// 249
+		TextWrite3.setHorizontalAlignment(SwingConstants.CENTER);
+		TextWrite3.setColumns(10);
+		proxyPopupFrame.add(TextWrite3);
+		TextWrite3.setText("168.188.129.4"); 	//디버깅
+		
+		// "Ethernet주소" 라벨과 텍스트 입력 창
+		JLabel lblEthernet = new JLabel("Ethernet주소");
+		lblEthernet.setBounds(10, 90, 80, 25);
+		proxyPopupFrame.add(lblEthernet);
+
+		TextWrite4 = new JTextField();
+		TextWrite4.setBounds(90, 90, 150, 25);// 249
+		TextWrite4.setHorizontalAlignment(SwingConstants.CENTER);
+		TextWrite4.setColumns(10);
+		proxyPopupFrame.add(TextWrite4);
+		TextWrite4.setText("06:05:04:03:02:01"); 	//디버깅
+
+		// 하단 버튼 두 개
+		proxyPopOkBtn = new JButton("OK");
+		proxyPopOkBtn.setBounds(30, 130, 100, 25);
+		proxyPopOkBtn.addActionListener(new setAddressListener());
+		proxyPopupFrame.add(proxyPopOkBtn);
+
+		proxyPopCancelBtn = new JButton("Cancel");
+		proxyPopCancelBtn.setBounds(150, 130, 100, 25);
+		proxyPopCancelBtn.addActionListener(new setAddressListener());
+		proxyPopupFrame.add(proxyPopCancelBtn);
+	}
+	
+	// routing add 팝업창 GUI
+	public void routingPopup() {
+		routingPopupFrame = new JFrame("Routing Table Entry 추가");
+		routingPopupFrame.setBounds(400, 300, 330, 240);
+		routingPopupFrame.setLayout(null);
+		routingPopupFrame.setVisible(true);
+
+		// "Destination" 라벨과 텍스트 입력 창
+		JLabel lblDest = new JLabel("Destination");
+		lblDest.setBounds(30, 10, 70, 25);
+		routingPopupFrame.add(lblDest);
+
+		TextWrite5 = new JTextField();
+		TextWrite5.setBounds(110, 10, 170, 25);
+		TextWrite5.setHorizontalAlignment(SwingConstants.CENTER);
+		TextWrite5.setColumns(10);
+		routingPopupFrame.add(TextWrite5);
+		TextWrite5.setText("192.168.3.0"); // 디버깅
+
+		// "Netmask" 라벨과 텍스트 입력 창
+		JLabel lblNetMask = new JLabel("Netmask");
+		lblNetMask.setBounds(30, 40, 70, 25);
+		routingPopupFrame.add(lblNetMask);
+
+		TextWrite6 = new JTextField();
+		TextWrite6.setBounds(110, 40, 170, 25);
+		TextWrite6.setHorizontalAlignment(SwingConstants.CENTER);
+		TextWrite6.setColumns(10);
+		routingPopupFrame.add(TextWrite6);
+		TextWrite6.setText("255.255.255.0"); // 디버깅
+
+		// "Gateway" 라벨과 텍스트 입력 창
+		JLabel lblGate = new JLabel("Gateway");
+		lblGate.setBounds(30, 70, 150, 25);
+		routingPopupFrame.add(lblGate);
+
+		TextWrite7 = new JTextField();
+		TextWrite7.setBounds(110, 70, 170, 25);
+		TextWrite7.setHorizontalAlignment(SwingConstants.CENTER);
+		TextWrite7.setColumns(10);
+		routingPopupFrame.add(TextWrite7);
+		TextWrite7.setText("192.168.2.1"); // 디버깅
+
+		// "Flag" 라벨과 체크박스
+		JLabel lblFlag = new JLabel("Flag");
+		lblFlag.setBounds(30, 100, 150, 25);
+		routingPopupFrame.add(lblFlag);
+
+		checkUp = new JCheckBox("UP");
+		checkUp.setBounds(110, 100, 45, 25);
+		routingPopupFrame.add(checkUp);
+
+		checkGate = new JCheckBox("Gateway");
+		checkGate.setBounds(160, 100, 80, 25);
+		routingPopupFrame.add(checkGate);
+
+		checkHost = new JCheckBox("Host");
+		checkHost.setBounds(240, 100, 60, 25);
+		routingPopupFrame.add(checkHost);
+
+		// "Interface" 라벨과 콤보박스
+		JLabel lblInterface = new JLabel("Interface");
+		lblInterface.setBounds(30, 130, 150, 25);
+		routingPopupFrame.add(lblInterface);
+
+		String[] str = { "0", "1", "2" };
+
+		cBoxInterface = new JComboBox<>(str);
+		cBoxInterface.setBounds(110, 130, 100, 25);
+		cBoxInterface.addActionListener(new setAddressListener());
+		cBoxInterface.setBackground(Color.WHITE);
+		((JLabel) cBoxInterface.getRenderer()).setHorizontalAlignment(SwingConstants.CENTER); // 텍스트를 가운데로 정렬하는 코드
+		routingPopupFrame.add(cBoxInterface);
+
+		// 하단 버튼 두 개
+		routingPopAddBtn = new JButton("Add");
+		routingPopAddBtn.setBounds(80, 165, 80, 25);
+		routingPopAddBtn.addActionListener(new setAddressListener());
+		routingPopupFrame.add(routingPopAddBtn);
+
+		routingPopCancelBtn = new JButton("Cancel");
+		routingPopCancelBtn.setBounds(180, 165, 80, 25);
+		routingPopCancelBtn.addActionListener(new setAddressListener());
+		routingPopupFrame.add(routingPopCancelBtn);
+	}
+
+	///////////////// 버튼 클릭 이벤트 *******************************************
 	class setAddressListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
+			// Routing Table 이벤트
+			if (e.getSource() == routingAddBtn)
+				routingPopup();
+			if (e.getSource() == routingDeleteBtn) 				// 선택한 routing entry를 삭제
+				deleteSelectedEntry(routingTable, routing_Table);
+			if (e.getSource() == routingPopAddBtn)
+				addNewEntry(routingTable);						// 입력한 값을 토대로 add new entry
+			if (e.getSource() == routingPopCancelBtn)
+				routingPopupFrame.dispose(); 					// 팝업창을 끈다		
 			// ARP 이벤트
-			if (e.getSource() == Item_Delete_Button) {
-				if (ArpArea.getSelectedValue() != null) {
-					// 선택한 Item의 문자열을 받아와 앞 뒤 공백을 제거한 후(trim) 가운데 공백을 구분자 삼아 토큰화 한다.
-					StringTokenizer st = new StringTokenizer(ArpArea.getSelectedValue().toString().trim(), " ");
-					// cache_Table 에서 제거한 뒤 GUI에서도 제거
-					cache_Table.remove(st.nextToken());
-					ARPModel.remove(ArpArea.getSelectedIndex());
-				}
-			}
-			if (e.getSource() == All_Delete_Button) {
-				// cache_Table 에서 모두 제거한 뒤 GUI에서도 제거
-				cache_Table.clear();
-				ARPModel.removeAllElements();
-			}
-			if (e.getSource() == ARP_Send_Button) {
-				if (isValidIPv4Addr(TextWrite.getText())) { // 올바른 IP주소 형식이 입력되었다면,
-					((ARPLayer) m_LayerMgr.GetLayer("ARP")).setDstIPAddr(strToByteArray(TextWrite.getText())); // ARpLayer에 dstAddr Set
-					((TCPLayer) m_LayerMgr.GetLayer("TCP")).Send("".getBytes(), 0); // Send 시작
-				} else {
-					System.out.println("올바른 IP주소를 입력하시오");
-				}
-			}
+			if (e.getSource() == ARPDeleteBtn) 					// 선택한 ARP entry를 삭제
+				deleteSelectedEntry(ARPTable, cache_Table);		// JTable과 <T extends Map<?, ?>>를 인자로 갖는 함수.
 			// Proxy 이벤트
-			if (e.getSource() == Proxy_Add_Button) { // 우측의 Add 버튼을 클릭 시, 팝업 다이얼로그
-				PopupDialog();
-			}
-			if (e.getSource() == Proxy_Delete_Button) {
-				if (ProxyArea.getSelectedValue() != null) {
-					StringTokenizer st2 = new StringTokenizer(ProxyArea.getSelectedValue().toString().trim(), " ");
-
-					// proxy_Table 에서 제거한 뒤 GUI에서도 제거
-					while(st2.hasMoreTokens()) {
-						String key = st2.nextToken();
-						if(proxy_Table.containsKey(key)) {
-							proxy_Table.remove(key);					// proxy_Table에서 제거
-							break;
-						}
-					}
-					ProxyModel.remove(ProxyArea.getSelectedIndex());	//GUI에서 제거
-				}
-			}
-			//popUpDialog에는 OK와 cancel 버튼이 있다.
-			if (e.getSource() == Proxy_OK_Button) { // 프록시 리스트에 Item 생성
-				if (TextWrite3.getText().trim().isEmpty() || TextWrite4.getText().trim().isEmpty())
-					System.out.println("입력되지 않은 항목이 있습니다");
-				else if(proxy_Table.containsKey(TextWrite3.getText()))	// printCash()를 실행하기 전에  이 조건문이 실행되면 오류 발생. 좋은 아이디어가 떠오르질 않음..
-					System.out.println("ProxyTable에 중복되는 IP가 있습니다");
-				else {
-						//proxyTable 의 setter를 호출하여 ARPLayer의 proxyModel에 set한다.
-					((ARPLayer) m_LayerMgr.GetLayer("ARP")).setProxyTable(	//proxy_Table에 저장
-							TextWrite3.getText(),							//argu1 : proxy_Table의 key로 지정할, IP 주소칸에 입력한 텍스트
-							strToByteArray2(TextWrite4.getText()), 			//argu2 : proxy_Table의 value로 지정할, Ethernet 주소칸에 입력한 텍스트
-							DeviceComboBox.getSelectedItem().toString());	//argu3 : proxy_Table의 value로 지정할, Combobox 에 선택된 값.
-					
-					ProxyModel.addElement(String.format("%18s%20s%23s", 	// ProxyModel(GUI)에 출력
-							DeviceComboBox.getSelectedItem().toString(), 	
-							TextWrite3.getText(), 
-							TextWrite4.getText())); 
-																			
-					PopUpFrame.dispose();
-				}
-			}
-			if (e.getSource() == Proxy_Cancel_Button) {
-				PopUpFrame.dispose(); // 팝업창을 끈다
-			}
-			// Grat 이벤트
-			if (e.getSource() == Grat_Send_Button) {
-				((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(strToByteArray2(TextWrite2.getText()));
-				((TCPLayer) m_LayerMgr.GetLayer("TCP")).GratSend("".getBytes(), 0); // Send 시작
-			}
-			// 하단 버튼 이벤트
-			if (e.getSource() == Bottom_Exit_Button) {
-				System.exit(0);
-				dispose();
-			}
-			if (e.getSource() == Bottom_Cancel_Button) {
-				System.exit(0);
-				dispose();
-			}
+			if (e.getSource() == proxyAddBtn)
+				proxyPopup();
+			if (e.getSource() == proxyDeleteBtn)  				// 선택한 proxy entry를 삭제
+				deleteSelectedEntry(proxyTable, proxy_Table);	
+			if (e.getSource() == proxyPopOkBtn) 				// proxy ARP Table에 Item 생성
+				addNewEntry(proxyTable);						// 입력한 값을 토대로 add new entry	
+			if (e.getSource() == proxyPopCancelBtn) 
+				proxyPopupFrame.dispose(); 						// 팝업창을 끈다
 		}
 	}
-
-	// IP
-	public byte[] strToByteArray(String str) {
+	// popup에서 값을 입력후 Add버튼을 눌렀을 때 자료구조와 GUI에 entry를 추가하는 함수
+	public void addNewEntry(JTable table) {
+		if(table == routingTable) {
+			if(!routing_Table.containsKey(TextWrite5.getText())) { // 라우팅 테이블에 중복되는 값이 없을 때만 entry를 추가한다
+				//자료구조에 추가
+				((IPLayer) m_LayerMgr.GetLayer("IP")).addRoutingEntry(
+						TextWrite5.getText(), 										// Dest IP (Key, String)
+						strIPToByteArray(TextWrite6.getText()),						// NetMask (byte[])
+						TextWrite7.getText(),										// Gateway (String)
+						isCheckUpTrue(),											// up Flag (boolean)
+						isCheckGateTrue(),											// gateway Flag (boolean)
+						Integer.parseInt((String) cBoxInterface.getSelectedItem())	// Interface (int)
+						);
+				// 자료구조에 추가할 때 (addRoutingEntry) IPLayer에서 sorting한다. 따라서 Sorting된 routingTable 자료구조를 다시 get해야 함
+				routing_Table = ((IPLayer) m_LayerMgr.GetLayer("IP")).getRoutingList();
+				routing_Table_Itr = routing_Table.keySet();
+				// GUI에 추가
+				DefaultTableModel routingModel = (DefaultTableModel) routingTable.getModel();
+				int rowCount = routingModel.getRowCount();
+				for(int i=rowCount - 1 ; i >= 0; i--)
+					routingModel.removeRow(i);											// GUI에서 모든 entry 삭제
+				for(String key : routing_Table_Itr) {
+					Object[] data = {
+							key, 														 // IP Address
+							byteArrayToStringIP(routing_Table.get(key).getSubnetMask()), // NetMask
+							routing_Table.get(key).getGateway(), 						 // Gateway
+							getFlag2(routing_Table.get(key).isFlag_Up(),
+									routing_Table.get(key).isFlag_Gateway()), 			 // Flag
+							routing_Table.get(key).getRoute_Interface(),				 // Interface
+							"0" 														 // Metric
+					};
+					routingModel.addRow(data); 											 // GUI에 재출력
+				}										
+				routingPopupFrame.dispose();
+			}
+		}else if(table == proxyTable) {
+			 if(!proxy_Table.containsKey(TextWrite3.getText())) {			// 프록시 테이블에 중복되는 값이 없을 때만 entry를 추가한다
+					//자료구조에 추가
+				 	((ARPLayer) m_LayerMgr.GetLayer("ARP")).setProxyTable( 	
+							TextWrite3.getText(), 							// argu1 : proxy_Table의 key로 지정할, IP 주소칸에 입력한 텍스트
+							strMACToByteArray(TextWrite4.getText()), 		// argu2 : proxy_Table의 value로 지정할, Ethernet 주소칸에 입력한 텍스트
+							cBoxDevice.getSelectedItem().toString()			// argu3 : proxy_Table의 value로 지정할, Combobox 에 선택된 값
+							); 	
+				 	//GUI에 추가
+					Object[] data = { 
+							TextWrite3.getText(), 
+							TextWrite4.getText(),
+							cBoxDevice.getSelectedItem().toString() 
+							};
+					DefaultTableModel model = (DefaultTableModel) table.getModel(); 	// proxy JTable의 model을 가져온다
+					model.addRow(data); 												// model에 추가 (GUI에 출력)
+					proxyPopupFrame.dispose();
+			 }
+		}
+	}
+	
+	// 1.아래 함수는 GUI에서 entry를 선택하고 Delete버튼을 눌렀을 시 작동한다. 선택한 entry를 자료구조와 GUI에서 삭제하는 기능의 함수다.
+	// 2.자료구조에서 삭제하려면 HashMap이 필요하고, GUI에서 삭제하려면 JTable이 필요하다. 그래서 이 함수는 HashMap과 JTable을 인자로 받는다.
+	// 3.그런데 routing,ARP,proxy의 HashMap 구조가 각기 다르다는 문제가 있다. 
+	// cache_Table은 Map<String, _Cache_Entry>이고, proxy_Table은 Map<String, _proxy_Entry>이다.
+	// 즉, Map의 두번째 인자가 다르다.
+	// 4.이를 해결하기 위해 제네릭을 사용. T는 상황에 따라서 Map<String, _Cache_Entry>가 될 수 있고 Map<String _Proxy_Entry>가 될 수도 있다.
+	public <T extends Map<String, ?>> void deleteSelectedEntry(JTable table, T cache) {
+		DefaultTableModel model = (DefaultTableModel) table.getModel();
+		String key = (String) model.getValueAt(table.getSelectedRow(), 0);
+		if(cache.containsKey(key)) {
+			cache.remove(key);								// 자료구조에서 삭제
+			model.removeRow(table.getSelectedRow());		// GUI에서 삭제
+		}
+	}
+	public boolean isCheckUpTrue() {
+		if(checkUp.isSelected())
+			return true;
+		else
+			return false;
+	}
+	
+	public boolean isCheckGateTrue() {
+		if(checkGate.isSelected())
+			return true;
+		else
+			return false;
+	}
+	
+	// routing popup에서 선택된 Flag 값에 알맞은 값을 반환 (unused?)
+	public String getFlag() {
+		if(checkUp.isSelected()) {
+			if(checkGate.isSelected()) 
+				return "UG";
+			if(checkHost.isSelected()) 
+				return "invalid";
+			return "U";
+		}
+		return "invalid";
+	}
+	//자료구조의 flag값을 참조
+	public String getFlag2(boolean up, boolean gate) {
+		if(up) {
+			if(gate)
+				return "UG";
+			else
+				return "U";
+		}
+		return "invalid";
+	}
+	// defaultTableModel을 만들어서 반환하는 함수
+	public static DefaultTableModel makeDefaultTableModel(Object[][] data, String[] column) {
+		DefaultTableModel model = new DefaultTableModel(data, column) {
+			@Override
+			public boolean isCellEditable(int row, int column) { // JTable 내 Cell을 수정 불가능하게 함
+				return false; 									 // all cells false
+			}
+		};
+		return model;
+	}
+	// String[] IP -> byte[] IP
+	// xxx.xxx.xxx.xxx -> byte[]
+	public byte[] strIPToByteArray(String str) {
 		byte[] bytes = new byte[4];
 		StringTokenizer st = new StringTokenizer(str, ".");
 
@@ -364,129 +564,54 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		return bytes;
 	}
 
-	// MAC
-	public byte[] strToByteArray2(String str) {
+	// String[] MAC -> byte[] MAC
+	// XX:XX:XX:XX:XX:XX -> byte[]
+	public byte[] strMACToByteArray(String str) {
 		byte[] byteMACAddr = new byte[6];
 		String[] byte_dst = str.split(":");
-		
-		for (int i = 0; i < 6; i++) {
+
+		for (int i = 0; i < 6; i++) 
 			byteMACAddr[i] = (byte) Integer.parseInt(byte_dst[i], 16);
-		}
 
 		return byteMACAddr;
 	}
 
-	//byte[]가 0.0.0 이면 ??? String으로 바꿔서 리턴, 0.0.0.이 아니면 정상적인 ethAddr이다. 이 ethAddr을 xx:xx:xx의 String으로 바꿔서 리턴. (GUI에 출력하기 위함)
-	public static String ethAddrToQuestionOrEth(byte[] input) {
-		if(isThisQuestion(input)) { // byte[]가 0000..이다 -> Question mark로 출력
+	// byte[] 를 경우에 따라서 "???" 또는 "AA:AA:AA:AA:AA:AA"로 GUI에 출력한다
+	public static String byteArrayToQuestionOrEth(byte[] input) {
+		if (isThisQuestion(input))  		// byte[]가 0000..이다 -> Question mark로 출력
 			return "???????????";
-		}
-		else {						// byte[]가 정상적인 ethAddr 형식이다 -> String으로 바꿔서 출력.
-			return byteArrayToString(input);
-		}
+		 else  								// byte[]가 정상적인 ethAddr 형식이다 -> String으로 바꿔서 출력.
+			return byteArrayToStringMAC(input);
 	}
-	
+
 	public static boolean isThisQuestion(byte[] input) {
-		for(byte a : input ) {	//byte[]를 순회하는데
-			if(a != 0) {		// 0 이 아닌 게 있다면,
-				return false;	//  ???가 아니다.
-			}
+		for (byte a : input) { 			// byte[]를 순회하는데
+			if (a != 0)  				// 0 이 아닌 게 있다면,
+				return false; 			// ???가 아니다.
 		}
 		return true;
 	}
-	public static String byteArrayToString(byte[] b) {	// byte[0] = 1, byte[1] = 2 일 때... 01:02 String으로 변경
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < b.length; ++i) {	
-        	sb.append(String.format("%02X", b[i] ));	// sb에 바이트를 str으로 바꿔서 저장한다. 이 때  1은 01, 2는 02 등 두 글자로 formatting
-            sb.append(":");								
-        }
-        sb.deleteCharAt(sb.length()-1);	// 마지막에 추가된 :를 지운다
-        return sb.toString();
-    }
 
-	// 팝업창 GUI
-	public void PopupDialog() {
-		PopUpFrame = new JFrame("Proxy ARP Entry 추가");
-		PopUpFrame.setBounds(200, 200, 300, 220);
-		contentPane2 = PopUpFrame.getContentPane();
-		PopUpFrame.setLayout(null);
-		PopUpFrame.setVisible(true);
-
-		// "Device" 라벨과 콤보박스
-		lblDevice = new JLabel("Device");
-		lblDevice.setBounds(47, 10, 60, 25);
-		contentPane2.add(lblDevice);
-
-		String[] str = { "Host B", "Host C" };
-
-		DeviceComboBox = new JComboBox<>(str);
-		DeviceComboBox.setBounds(90, 10, 150, 25);
-		DeviceComboBox.addActionListener(new setAddressListener());
-		((JLabel) DeviceComboBox.getRenderer()).setHorizontalAlignment(SwingConstants.CENTER); // 텍스트를 가운데로 정렬하는 코드
-		contentPane2.add(DeviceComboBox);
-
-		// "IP주소" 라벨과 텍스트 입력 창
-		lblPopUpIP = new JLabel("IP주소");
-		lblPopUpIP.setBounds(47, 50, 60, 25);
-		contentPane2.add(lblPopUpIP);
-
-		TextInputPanel3 = new JPanel();// chatting write panel
-		TextInputPanel3.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
-		TextInputPanel3.setBounds(90, 50, 150, 25);
-		contentPane2.add(TextInputPanel3);
-		TextInputPanel3.setLayout(null);
-
-		TextWrite3 = new JTextField();
-		TextWrite3.setBounds(2, 2, 150, 25);// 249
-		TextInputPanel3.add(TextWrite3);
-		TextWrite3.setHorizontalAlignment(SwingConstants.CENTER);
-		TextWrite3.setColumns(10);
-		TextWrite3.setText("168.188.129.4"); 	//디버깅
-		
-
-		// "Ethernet주소" 라벨과 텍스트 입력 창
-		lblEthernet = new JLabel("Ethernet주소");
-		lblEthernet.setBounds(10, 90, 80, 25);
-		contentPane2.add(lblEthernet);
-
-		TextInputPanel4 = new JPanel();// chatting write panel
-		TextInputPanel4.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
-		TextInputPanel4.setBounds(90, 90, 150, 25);
-		contentPane2.add(TextInputPanel4);
-		TextInputPanel4.setLayout(null);
-
-		TextWrite4 = new JTextField();
-		TextWrite4.setBounds(2, 2, 150, 25);// 249
-		TextInputPanel4.add(TextWrite4);
-		TextWrite4.setHorizontalAlignment(SwingConstants.CENTER);
-		TextWrite4.setColumns(10);// writing area
-		TextWrite4.setText("06:05:04:03:02:01"); 	//디버깅
-
-		// 하단 버튼 두 개
-		Proxy_OK_Button = new JButton("OK");
-		Proxy_OK_Button.setBounds(30, 130, 100, 25);
-		Proxy_OK_Button.addActionListener(new setAddressListener());
-		contentPane2.add(Proxy_OK_Button);// chatting send button
-
-		Proxy_Cancel_Button = new JButton("Cancel");
-		Proxy_Cancel_Button.setBounds(150, 130, 100, 25);
-		Proxy_Cancel_Button.addActionListener(new setAddressListener());
-		contentPane2.add(Proxy_Cancel_Button);// chatting send button
-	}
-
-	// 유효한 IP 형식인지 체크. 속도 저하의 주범
-	public boolean isValidIPv4Addr(String ip) {
-		try {
-			return InetAddress.getByName(ip).getHostAddress().equals(ip);
-		} catch (UnknownHostException ex) {
-			return false;
+	public static String byteArrayToStringMAC(byte[] b) { // byte[0] = 1, byte[1] = 2 일 때... 01:02 String으로 변경
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < b.length; ++i) {
+			sb.append(String.format("%02X", b[i])); // sb에 바이트를 str으로 바꿔서 저장한다. 이 때 1은 01, 2는 02 등 두 글자로 formatting
+			sb.append(":");
 		}
-
+		sb.deleteCharAt(sb.length() - 1); // 마지막에 추가된 :를 지운다
+		return sb.toString();
+	}
+	
+	public static String byteArrayToStringIP(byte[] bytes) {
+		String ipAddr = "";
+		for (byte b : bytes) {
+			ipAddr += Integer.toString(b & 0xFF) + ".";
+		}
+		return ipAddr.substring(0, ipAddr.length() - 1);
 	}
 
 	@Override
 	public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
-		// TODO Auto-generated method stub
 		if (pUnderLayer == null)
 			return;
 		this.p_UnderLayer = pUnderLayer;
@@ -494,7 +619,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 
 	@Override
 	public void SetUpperLayer(BaseLayer pUpperLayer) { // 상위 레이어 설정
-		// TODO Auto-generated method stub
 		if (pUpperLayer == null)
 			return;
 		this.p_aUpperLayer.add(nUpperLayerCount++, pUpperLayer);
@@ -503,13 +627,11 @@ public class ARPDlg extends JFrame implements BaseLayer {
 
 	@Override
 	public String GetLayerName() { // 레이어 이름 반환
-		// TODO Auto-generated method stub
 		return pLayerName;
 	}
 
 	@Override
 	public BaseLayer GetUnderLayer() { // 하위 레이어 반환
-		// TODO Auto-generated method stub
 		if (p_UnderLayer == null)
 			return null;
 		return p_UnderLayer;
@@ -517,7 +639,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 
 	@Override
 	public BaseLayer GetUpperLayer(int nindex) { // 상위 레이어 반환
-		// TODO Auto-generated method stub
 		if (nindex < 0 || nindex > nUpperLayerCount || nUpperLayerCount < 0)
 			return null;
 		return p_aUpperLayer.get(nindex);

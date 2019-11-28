@@ -107,6 +107,18 @@ public class ARPLayer implements BaseLayer {
 		ResetHeader();
 		run_Clean_Thread(cache_Table, cache_Itr);
 		// 캐시테이블 자동 제거 스레드
+		
+		// 디버깅
+		String target_IP = "111.111.111.111";
+		_Cache_Entry cache_Entry = // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
+				new _Cache_Entry(new byte[6], "Incomplete", 80);
+
+		cache_Table.put(target_IP, cache_Entry);
+
+		target_IP = "222.222.222.222";
+		cache_Entry = new _Cache_Entry(new byte[6], "Incomplete", 10);
+
+		cache_Table.put(target_IP, cache_Entry);
 	}
 
 	public void ResetHeader() {
@@ -417,7 +429,6 @@ public class ARPLayer implements BaseLayer {
 			this.my_cache_Table = cachetable;
 			this.my_cache_Itr = cacheIterator;
 		}
-
 		@Override
 		public void run() {
 			ArrayList<String> willRemoved = new ArrayList<String>();
@@ -536,10 +547,6 @@ public class ARPLayer implements BaseLayer {
 		for (int i = 0; i < 4; i++) {
 			target.addr[i] = input[i + 24];
 		} // ※ target.addr -> target.addr.toString()
-
-		System.out.println("ip가 다른가:" + Arrays.equals(myIp.addr, target.addr));
-		System.out.println("프록시 테이블에 있는가:" + proxy_Table.containsKey(target.toString()));
-		System.out.println("ip tostring:" + target.toString());
 
 		if (!Arrays.equals(myIp.addr, target.addr) && proxy_Table.containsKey(target.toString()) == true) {
 			return true;
@@ -694,3 +701,5 @@ public class ARPLayer implements BaseLayer {
 	}
 
 }
+
+// 커밋 테스트
