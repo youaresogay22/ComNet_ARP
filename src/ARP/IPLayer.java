@@ -143,6 +143,7 @@ public class IPLayer implements BaseLayer {
 	_IP_HEADER m_iHeader = new _IP_HEADER();
 
 	// routing table에 add하는 함수
+	// gateway 별표
 	public void addRoutingEntry(byte[] input_destAddress, byte[] input_subnetMask, String input_gateway,
 			boolean input_flag_Up, boolean input_flag_Gateway, int input_route_Interface) {
 
