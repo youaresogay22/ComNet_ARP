@@ -12,6 +12,7 @@ import static ARP.EthernetLayer.byte4To2;
 import static ARP.EthernetLayer.intToByte;
 import static ARP.IPLayer._IP_ADDR;
 
+
 public class ARPLayer implements BaseLayer {
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
@@ -26,7 +27,6 @@ public class ARPLayer implements BaseLayer {
 	public final _ETHERNET_ADDR MY_MAC_ADDRESS = new _ETHERNET_ADDR();
 
 	public class _Cache_Entry {
-		// basic cache
 		byte[] cache_ethaddr;
 		String cache_status;
 		int cache_ttl; // time to live

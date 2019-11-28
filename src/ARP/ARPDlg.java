@@ -32,8 +32,9 @@ import ARP.ARPLayer._Proxy_Entry;
 import ARP.IPLayer._Routing_Entry;
 
 
-// CheckOne (subnet 구하는 함수) 메커니즘이 잘못된 듯.
 // ARP cache Table을 쓰레드 없이 갱신할 수 있나? (TTL때문)
+// IP Layer -> Routing Table
+// ConnectLayers
 
 @SuppressWarnings("serial")
 public class ARPDlg extends JFrame implements BaseLayer {
@@ -469,7 +470,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 							"0" 														 // Metric
 					};
 					routingModel.addRow(data); 											 // GUI에 재출력
-				}										
+				}
 				routingPopupFrame.dispose();
 			}
 		}else if(table == proxyTable) {
@@ -534,8 +535,8 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	}
 	//자료구조의 flag값을 참조
 	public String getFlag2(boolean up, boolean gate) {
-		if(up) {
-			if(gate)
+		if(up) {				// 자료구조 내부의 flag_up 변수가 True
+			if(gate)			// 자료구조 내부의 flag_gateway 변수가 True
 				return "UG";
 			else
 				return "U";

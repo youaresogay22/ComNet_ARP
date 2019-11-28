@@ -181,7 +181,10 @@ public class IPLayer implements BaseLayer {
 
 			String str = byteArrayToBinaryString(input_subnetMask);	// byte[] subnetMask를 binary String으로 변환
 			additional.setSubnetLen(checkOne(str));					// binary String에서 1의 개수를 구해서 자료구조 subnetLen으로 set
-			routing_Table.put(input_destAddress, additional);
+			if(additional.getSubnetLen() == 0) 						// subnetLen이 0이면 GUI에서 subnet 입력이 잘못된 것, 따라서 자료구조에 put하지 않는다
+				System.out.println("올바른 형식의 서브넷 마스크를 입력하시오");
+			else
+				routing_Table.put(input_destAddress, additional);
 		}
 		//sort
 		routing_Table = sortByValue(routing_Table);
@@ -200,17 +203,24 @@ public class IPLayer implements BaseLayer {
 					sb.setCharAt(7 - bit, '1');
 				}
 			}
-			result.append(" " + sb);
+			result.append(sb);
 		}
 		return result.toString();
 	}
 
-	// BinaryString에서 1이 몇 개인지 check
+	// BinaryString에서 연속되는 1이 몇 개인지 check. subnet은 연속되는 1이므로
 	public static int checkOne(String str) {
 		int count = 0;
-		for (int bit = 0; bit < str.length(); bit++)
-			if (str.charAt(bit) == "1".charAt(0))
-				count++;
+		for (int bit = 0; bit < str.length(); bit++) {
+			if (str.charAt(bit) == "1".charAt(0))		// str.charAt(bit) == 1
+				count++;								// 1이 연속될 때만 count한다.
+			else {										// 1의 연속이 끊겼다
+				for(int bitAfter = bit+1; bitAfter < str.length(); bitAfter++) {	//1의 연속이 끝난 이후의 binaryString을 탐색
+					if(str.charAt(bitAfter) == "1".charAt(0))	
+						return 0;						// 1의 연속이 끝난 시점 이후에 1이 포함되어있다 -> 사용자가 올바른 형식의 서브넷을 입력하지 않은 것
+				}
+			}
+		}
 		return count;
 	}
 	
@@ -236,15 +246,14 @@ public class IPLayer implements BaseLayer {
 		return resultMap;
 	}
 	
-	//for debug
+	//print for debug
 	public void printRoutingTable() {
 		routing_Table_Itr = routing_Table.keySet();
 		
+		System.out.println("--------------------------------------");
 		for (String key : routing_Table_Itr) 
-			System.out.println(key + " " + routing_Table.get(key).subnetMask + " " + routing_Table.get(key).gateway
-					+ " " + routing_Table.get(key).route_Interface + " " + routing_Table.get(key).subnetLen);
-		
-		System.out.println("routingTable at IPLayer = " + routing_Table);
+			System.out.println(String.format("%18s", key) + String.format("%18s", routing_Table.get(key).subnetMask) 
+			+ String.format("%15s", routing_Table.get(key).gateway) +String.format("%5s", routing_Table.get(key).subnetLen));
 	}
 	
 	public Map<String, _Routing_Entry> getRoutingList() {
