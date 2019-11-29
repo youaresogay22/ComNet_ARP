@@ -437,8 +437,8 @@ public class ARPLayer implements BaseLayer {
 				for (String ipAddr : willRemoved) {
 					System.out.println("-------TTL 발동 ------- " + ipAddr + " 삭제했음");
 					my_cache_Table.remove(ipAddr);
-					willRemoved.remove(ipAddr); // new
-					break; // new
+					willRemoved.remove(ipAddr);
+					break;
 				}
 
 				try {

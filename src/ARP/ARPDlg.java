@@ -96,9 +96,22 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.AddLayer(new IPLayer("IP"));
 		m_LayerMgr.AddLayer(new TCPLayer("TCP"));
 		m_LayerMgr.AddLayer(new ARPDlg("GUI"));
-
+		
+		m_LayerMgr.AddLayer(new NILayer("NI2"));
+		m_LayerMgr.AddLayer(new EthernetLayer("ETHERNET2"));
+		m_LayerMgr.AddLayer(new ARPLayer("ARP2"));
+		m_LayerMgr.AddLayer(new IPLayer("IP2"));
+		m_LayerMgr.AddLayer(new TCPLayer("TCP2"));
+		//m_LayerMgr2 객체로 해야하나?
+		
+		// IP레이어 간 연결하는 코드 추가
+		// RoutingTable, proxyTable, ARPCacheTAble 자료구조를 "IP1"과 "IP2"에 분배?
+		
 		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) )");
+		m_LayerMgr.ConnectLayers(" NI2 ( *ETHERNET2 ( *ARP2 +IP2 ( -ARP2 *TCP2 ( *GUI ) ) ) )");
+		
 		((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(0);//PC마다 다르다. 0번이 아닐 수도 있기 때문에, 탐색하는 함수를 만들면 편할듯
+	//	((NILayer) m_LayerMgr.GetLayer("NI2")).SetAdapterNumber(1);
 		
 		// 2초 마다 printCash()를 호출하여 캐시 테이블과 GUI를 갱신하는 쓰레드
 		Runnable task = () -> {
