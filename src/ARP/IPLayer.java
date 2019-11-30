@@ -3,6 +3,7 @@ package ARP;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 import ARP.RoutingTable._Routing_Entry;
 
@@ -14,11 +15,11 @@ public class IPLayer implements BaseLayer {
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 	
-	public Map<String, _Routing_Entry> routing_Table = new LinkedHashMap<String, _Routing_Entry>();
-	
 	IPLayer otherIPLayer;
 	
-	RoutingTable[] routingTable;	// 라우팅테이블
+	public Map<String, _Routing_Entry> routing_Table;
+	static RoutingTable rtClass = new RoutingTable();
+	static Set<String> routing_Table_Itr;
 
 	// router: _IP_ADDR class moved from ARPlayer to IPlayer
 	public static class _IP_ADDR {
@@ -41,6 +42,8 @@ public class IPLayer implements BaseLayer {
 			return ipString.substring(0, ipString.length() - 1);
 		}
 
+		//_IP_ADDRESS ip;
+		//ip.do_And_operation()
 		// ip byte끼리의 and 연산 함수
 		public byte[] do_And_operation(byte[] sourceIP) {
 			byte[] temp = new byte[4];
@@ -165,21 +168,94 @@ public class IPLayer implements BaseLayer {
 		return null;
 	}
 
-	public boolean Receive(byte[] input) {
+public boolean Receive(byte[] input) {
+		
+		routing_Table = rtClass.getRoutingList();
+		routing_Table_Itr = routing_Table.keySet();
+
 		// routing table 탐색 후
 		// 맞는 interface로 전송
 		// arrangeIPHeader(input)
+
 		byte[] data;
 		data = new byte[input.length];
 		System.arraycopy(input, 0, data, 0, input.length);
-				
-		byte[] dstAddr = new byte[4];	// input의 목적주소만 빼서 따로 저장
+
+		byte[] srcAddr = new byte[4];	// input의 src주소만 빼서 따로 저장
+		srcAddr[0] = input[12];
+		srcAddr[1] = input[13];
+		srcAddr[2] = input[14];
+		srcAddr[3] = input[15];
+		
+		byte[] dstAddr = new byte[4];	// input의 dst주소만 빼서 따로 저장
 		dstAddr[0] = input[16];
 		dstAddr[1] = input[17];
 		dstAddr[2] = input[18];
 		dstAddr[3] = input[19];
-		
-		return true;
+
+		int subnet_check = 0;	// Routing Table 목적 주소 중 연산한 주소가 있는지 없는지 체크, 없으면 0 있으면 1
+		for (String key : routing_Table_Itr) {	// Routing Table 검색을 위한 for문, Routing 테이블 한줄한줄 읽기
+			String st_rt_dstAddr = key;
+			byte[] rt_dstAddr = strIPToByteArray(key); 
+
+			// Routing Table의 Flag, get(key) : 한줄 통째로 들고오기
+			boolean rt_flagUp = routing_Table.get(key).isFlag_Up();
+			boolean rt_flagGateway = routing_Table.get(key).isFlag_Gateway();
+			
+			// * 시나리오
+			// 1. Host Address 검색 -> 내 주소이면 drop
+			// 2. 서브넷마스크 연산하여 검색 -> 있으면 flag 확인, 인터페이스 확인 후, 하위레이어로 보냄
+			
+			if (dstAddr==rt_dstAddr) {			
+
+				// 출발 주소와 목적 주소가 같은 경우 drop
+
+			} else {
+				for (int j=0; j<4; j++) {
+					// Routing Table의 Subnet mask
+					byte[] rt_subnetMask = routing_Table.get(key).getSubnetMask();
+
+					if (rt_dstAddr[j] != (dstAddr[j] & rt_subnetMask[j])) {
+						subnet_check = 0;
+						break;
+					}
+					else {
+						subnet_check = 1;
+					}
+				if (subnet_check == 1) {
+
+					// Flag U인 경우, FlagUp=true, FlagGateway=false
+					if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==false) {
+						if (routing_Table.get(key).getRoute_Interface()==1) {
+							// ((ARPLayer) this.GetUnderLayer(0)).Send(data, data.length);
+						}
+						else if (routing_Table.get(key).getRoute_Interface()==2) {
+							// ((ARPLayer) this.GetUnderLayer(1)).Send(data, data.length);
+						}
+					// Flag UG인 경우, FlagUp=true, FlagGateway=true	
+					} else if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==true) {
+
+						if (routing_Table.get(key).getRoute_Interface()==1) {
+							// ((ARPLayer) this.GetUnderLayer(0)).Send(data2);
+						}
+						else {
+							// ((ARPLayer) this.GetUnderLayer(1)).Send(data2);
+							} 
+						}
+					else {	// subnet_check == 0, Default entry로 보냄
+
+							if (routing_Table.get(key).getRoute_Interface()==1) {
+								// ((ARPLayer) this.GetUnderLayer(0)).Send(data2);
+							}
+							else {
+								// ((ARPLayer) this.GetUnderLayer(1)).Send(data2);
+							}
+						}
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	public boolean Receive() {
@@ -190,6 +266,17 @@ public class IPLayer implements BaseLayer {
 	public boolean Send(String filename) {
 		// baselayer 기본 함수, 쓸 일 없을 듯
 		return false;
+	}
+	
+	// String -> Byte 전환
+	public byte[] strIPToByteArray(String str) {
+		byte[] bytes = new byte[4];
+		StringTokenizer st = new StringTokenizer(str, ".");
+
+		for (int i = 0; i < 4; i++)
+			bytes[i] = (byte) Integer.parseInt(st.nextToken());
+
+		return bytes;
 	}
 
 	// old

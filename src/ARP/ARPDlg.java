@@ -151,9 +151,40 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		Thread cacheUpdate = new Thread(task,"cacheUpdataThread");
 		cacheUpdate.start();
 		
+		// 2초마다 gratSend()를 호출하는 함수
+		Runnable GARPTask = () -> {
+			while (true) {
+				try {
+					String threadName = Thread.currentThread().getName();
+					System.out.println("Hello " + threadName);
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				runGratSend();
+			}
+		};
+
+		Thread runGARP = new Thread(GARPTask, "runningGARP");
+		runGARP.start();
+		
 		//프로그램 구동 초기에 null을 참조해서 에러나는 경우를 방지하기 위해 초기화
 		proxy_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getProxyList();
 		routing_Table = rtClass.getRoutingList();
+	}
+	
+	public static void runGratSend() {
+		byte[] myMAC = new byte[6];
+		// ARPLayer가 생성되고 난 뒤에(== getMyPCAddr()함수가 호출된 다음에) 쓰레드가 start..
+		myMAC = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getMY_MAC_ADDRESS();
+		((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(myMAC);
+		((TCPLayer) m_LayerMgr.GetLayer("TCP")).GratSend("".getBytes(), 0);
+		
+		byte[] myMAC2 = new byte[6];
+		myMAC2 = ((ARPLayer) m_LayerMgr.GetLayer("ARP2")).getMY_MAC_ADDRESS();
+		((ARPLayer) m_LayerMgr.GetLayer("ARP2")).setSrcMAC(myMAC2);
+		((TCPLayer) m_LayerMgr.GetLayer("TCP2")).GratSend("".getBytes(), 0);
 	}
 	
 	//1.TTL로 제거되는 ARP Cache entry를 GUI에 실시간으로 반영해야 한다. 
