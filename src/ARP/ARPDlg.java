@@ -29,19 +29,20 @@ import javax.swing.table.DefaultTableModel;
 
 import ARP.ARPLayer._Cache_Entry;
 import ARP.ARPLayer._Proxy_Entry;
-import ARP.IPLayer._Routing_Entry;
+import ARP.RoutingTable._Routing_Entry;
 
 
 // ARP cache Table을 쓰레드 없이 갱신할 수 있나? (TTL때문)
-// IP Layer -> Routing Table
 // ConnectLayers
 
 @SuppressWarnings("serial")
 public class ARPDlg extends JFrame implements BaseLayer {
 
+	public int nUnderLayerCount =0;
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
+	public ArrayList<BaseLayer> p_aUnderLayer = new ArrayList<BaseLayer>();
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
 	private static LayerManager m_LayerMgr = new LayerManager();
 	
@@ -89,6 +90,8 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	Object[][] ARPData = {};
 	Object[][] proxyData = {};
 	
+	static RoutingTable rtClass = new RoutingTable();
+	
 	public static void main(String[] args) throws SocketException {
 		m_LayerMgr.AddLayer(new NILayer("NI"));
 		m_LayerMgr.AddLayer(new EthernetLayer("ETHERNET"));
@@ -102,7 +105,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.AddLayer(new ARPLayer("ARP2"));
 		m_LayerMgr.AddLayer(new IPLayer("IP2"));
 		m_LayerMgr.AddLayer(new TCPLayer("TCP2"));
-		//m_LayerMgr2 객체로 해야하나?
 		
 		// IP레이어 간 연결하는 코드 추가
 		// RoutingTable, proxyTable, ARPCacheTAble 자료구조를 "IP1"과 "IP2"에 분배?
@@ -130,7 +132,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		
 		//프로그램 구동 초기에 null을 참조해서 에러나는 경우를 방지하기 위해 초기화
 		proxy_Table = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getProxyList();
-		routing_Table = ((IPLayer) m_LayerMgr.GetLayer("IP")).getRoutingList();
+		routing_Table = rtClass.getRoutingList();
 	}
 	
 	//1.TTL로 제거되는 ARP Cache entry를 GUI에 실시간으로 반영해야 한다. 
@@ -456,7 +458,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		if(table == routingTable) {
 			if(!routing_Table.containsKey(TextWrite5.getText())) { // 라우팅 테이블에 중복되는 값이 없을 때만 entry를 추가한다
 				//자료구조에 추가
-				((IPLayer) m_LayerMgr.GetLayer("IP")).addRoutingEntry(
+				rtClass.addRoutingEntry(
 						TextWrite5.getText(), 										// Dest IP (Key, String)
 						strIPToByteArray(TextWrite6.getText()),						// NetMask (byte[])
 						TextWrite7.getText(),										// Gateway (String)
@@ -465,7 +467,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 						Integer.parseInt((String) cBoxInterface.getSelectedItem())	// Interface (int)
 						);
 				// 자료구조에 추가할 때 (addRoutingEntry) IPLayer에서 sorting한다. 따라서 Sorting된 routingTable 자료구조를 다시 get해야 함
-				routing_Table = ((IPLayer) m_LayerMgr.GetLayer("IP")).getRoutingList();
+				routing_Table = rtClass.getRoutingList();
 				routing_Table_Itr = routing_Table.keySet();
 				// GUI에 추가
 				DefaultTableModel routingModel = (DefaultTableModel) routingTable.getModel();
@@ -624,12 +626,21 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		return ipAddr.substring(0, ipAddr.length() - 1);
 	}
 
+	// old
 	@Override
 	public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
 		if (pUnderLayer == null)
 			return;
 		this.p_UnderLayer = pUnderLayer;
 	}
+	
+	// new
+	//@Override
+	//public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
+	//	if (pUnderLayer == null)
+	//		return;
+	//	this.p_aUnderLayer.add(nUnderLayerCount++, pUnderLayer);
+	//}
 
 	@Override
 	public void SetUpperLayer(BaseLayer pUpperLayer) { // 상위 레이어 설정
@@ -644,12 +655,21 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		return pLayerName;
 	}
 
+	// old
 	@Override
 	public BaseLayer GetUnderLayer() { // 하위 레이어 반환
 		if (p_UnderLayer == null)
 			return null;
 		return p_UnderLayer;
 	}
+	
+	// new
+	//@Override
+	//public BaseLayer GetUnderLayer(int nindex) { // 상위 레이어 반환
+	//	if (nindex < 0 || nindex > nUnderLayerCount || nUnderLayerCount < 0)
+	//		return null;
+	//	return p_aUnderLayer.get(nindex);
+	//}
 
 	@Override
 	public BaseLayer GetUpperLayer(int nindex) { // 상위 레이어 반환
