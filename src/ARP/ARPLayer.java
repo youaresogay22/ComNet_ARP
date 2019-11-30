@@ -14,6 +14,8 @@ import static ARP.IPLayer._IP_ADDR;
 
 
 public class ARPLayer implements BaseLayer {
+	public int nUnderLayerCount =0;
+	public ArrayList<BaseLayer> p_aUnderLayer = new ArrayList<BaseLayer>();
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
@@ -217,14 +219,14 @@ public class ARPLayer implements BaseLayer {
 			if (!cache_Table.containsKey(target_IP))
 				cache_Table.put(target_IP, cache_Entry);
 
-			this.GetUnderLayer().Send(ARP_header_added_bytes, ARP_header_added_bytes.length); // Send Request Message
+			this.GetUnderLayer(0).Send(ARP_header_added_bytes, ARP_header_added_bytes.length); // Send Request Message
 		} else { // byte[]가 비어있지 않다 -> Send Reply Message
 			for (int i = 0; i < 6; i++)
 				input[i + 18] = MY_MAC_ADDRESS.addr[i]; // 패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
 			input = swappingAddr(input); // src 주소 <-> target 주소 swapping
 			input[6] = (byte) 0x00; // setOpCode(2)
 			input[7] = (byte) 0x02;
-			this.GetUnderLayer().Send(input, input.length); // Send Reply Message
+			this.GetUnderLayer(0).Send(input, input.length); // Send Reply Message
 		}
 		return false;
 	}
@@ -304,7 +306,7 @@ public class ARPLayer implements BaseLayer {
 		byte[] grat_message = ObjToByte(m_aHeader, input, length); // ARPMessage
 
 		// Gratuitous ARP Message 내려보내기
-		this.GetUnderLayer().Send(grat_message, grat_message.length);
+		this.GetUnderLayer(0).Send(grat_message, grat_message.length);
 		return true;
 	}
 
@@ -357,7 +359,7 @@ public class ARPLayer implements BaseLayer {
 		input[6] = (byte) 0x00;
 		input[7] = (byte) 0x02;
 		// byte[] bytes = ObjToByte(m_aHeader, input, length);
-		this.GetUnderLayer().Send(input, input.length);
+		this.GetUnderLayer(0).Send(input, input.length);
 		return true;
 	}
 
@@ -658,16 +660,24 @@ public class ARPLayer implements BaseLayer {
 		temp.deleteCharAt(temp.length() - 1);
 		return temp.toString();
 	}
+	// old
+	// @Override
+	// public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
+	// if (pUnderLayer == null)
+	// return;
+	// this.p_UnderLayer = pUnderLayer;
+	// }
 
+	// new
 	@Override
-	public void SetUnderLayer(BaseLayer pUnderLayer) {
+	public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
 		if (pUnderLayer == null)
 			return;
-		this.p_UnderLayer = pUnderLayer;
+		this.p_aUnderLayer.add(nUnderLayerCount++, pUnderLayer);
 	}
 
 	@Override
-	public void SetUpperLayer(BaseLayer pUpperLayer) {
+	public void SetUpperLayer(BaseLayer pUpperLayer) { // 상위 레이어 설정
 		if (pUpperLayer == null)
 			return;
 		this.p_aUpperLayer.add(nUpperLayerCount++, pUpperLayer);
@@ -675,31 +685,38 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	@Override
-	public String GetLayerName() {
+	public String GetLayerName() { // 레이어 이름 반환
 		return pLayerName;
 	}
 
+	// old
+	// @Override
+	// public BaseLayer GetUnderLayer() { // 하위 레이어 반환
+	// if (p_UnderLayer == null)
+	// return null;
+	// return p_UnderLayer;
+	// }
+
+	// new
 	@Override
-	public BaseLayer GetUnderLayer() {
-		if (p_UnderLayer == null)
+	public BaseLayer GetUnderLayer(int nindex) { // 상위 레이어 반환
+		if (nindex < 0 || nindex > nUnderLayerCount || nUnderLayerCount < 0)
 			return null;
-		return p_UnderLayer;
+		return p_aUnderLayer.get(nindex);
 	}
 
 	@Override
-	public BaseLayer GetUpperLayer(int nindex) {
+	public BaseLayer GetUpperLayer(int nindex) { // 상위 레이어 반환
 		if (nindex < 0 || nindex > nUpperLayerCount || nUpperLayerCount < 0)
 			return null;
 		return p_aUpperLayer.get(nindex);
 	}
 
 	@Override
-	public void SetUpperUnderLayer(BaseLayer pUULayer) {
+	public void SetUpperUnderLayer(BaseLayer pUULayer) { // 매개변수로 받은 레이어를 상위레이어로 세팅하고, 그 레이어의 하위를 함수를 호출한 객체로 저장
 		this.SetUpperLayer(pUULayer);
 		pUULayer.SetUnderLayer(this);
-
 	}
-
 }
 
 // 커밋 테스트
