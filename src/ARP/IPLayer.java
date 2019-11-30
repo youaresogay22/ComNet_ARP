@@ -194,9 +194,12 @@ public boolean Receive(byte[] input) {
 		dstAddr[3] = input[19];
 
 		int subnet_check = 0;	// Routing Table 목적 주소 중 연산한 주소가 있는지 없는지 체크, 없으면 0 있으면 1
+		
 		for (String key : routing_Table_Itr) {	// Routing Table 검색을 위한 for문, Routing 테이블 한줄한줄 읽기
+			
+			// Routing Table의 Destination Address
 			String st_rt_dstAddr = key;
-			byte[] rt_dstAddr = strIPToByteArray(key); 
+			byte[] rt_dstAddr = strIPToByteArray(st_rt_dstAddr); 
 
 			// Routing Table의 Flag, get(key) : 한줄 통째로 들고오기
 			boolean rt_flagUp = routing_Table.get(key).isFlag_Up();
@@ -205,53 +208,68 @@ public boolean Receive(byte[] input) {
 			// * 시나리오
 			// 1. Host Address 검색 -> 내 주소이면 drop
 			// 2. 서브넷마스크 연산하여 검색 -> 있으면 flag 확인, 인터페이스 확인 후, 하위레이어로 보냄
+			// 3. * Default entry 검색 
 			
 			if (dstAddr==rt_dstAddr) {			
 
-				// 출발 주소와 목적 주소가 같은 경우 drop
+				break;	// 출발 주소와 목적 주소가 같은 경우 drop
 
 			} else {
 				for (int j=0; j<4; j++) {
+					
 					// Routing Table의 Subnet mask
 					byte[] rt_subnetMask = routing_Table.get(key).getSubnetMask();
 
 					if (rt_dstAddr[j] != (dstAddr[j] & rt_subnetMask[j])) {
 						subnet_check = 0;
-						break;
+						break;	// 일치하는 네트워크 주소가 없으면 default entry
 					}
 					else {
 						subnet_check = 1;
 					}
+				}
+				
 				if (subnet_check == 1) {
 
 					// Flag U인 경우, FlagUp=true, FlagGateway=false
 					if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==false) {
+						
 						if (routing_Table.get(key).getRoute_Interface()==1) {
 							// ((ARPLayer) this.GetUnderLayer(0)).Send(data, data.length);
 						}
 						else if (routing_Table.get(key).getRoute_Interface()==2) {
 							// ((ARPLayer) this.GetUnderLayer(1)).Send(data, data.length);
 						}
+
 					// Flag UG인 경우, FlagUp=true, FlagGateway=true	
 					} else if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==true) {
+						
+						// * 라우팅 테이블의 Gateway address를 내려보내야함
+						
+						String st_rt_gateway = routing_Table.get(key).getGateway();
+						byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
 
 						if (routing_Table.get(key).getRoute_Interface()==1) {
 							// ((ARPLayer) this.GetUnderLayer(0)).Send(data2);
 						}
 						else {
 							// ((ARPLayer) this.GetUnderLayer(1)).Send(data2);
-							} 
-						}
-					else {	// subnet_check == 0, Default entry로 보냄
-
-							if (routing_Table.get(key).getRoute_Interface()==1) {
-								// ((ARPLayer) this.GetUnderLayer(0)).Send(data2);
-							}
-							else {
-								// ((ARPLayer) this.GetUnderLayer(1)).Send(data2);
-							}
 						}
 					}
+					
+				} else {	// subnet_check == 0, Default entry로 보냄
+						
+					// * 라우팅 테이블의 Gateway address를 내려보내야함
+						
+					String st_rt_gateway = routing_Table.get(key).getGateway();
+					byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
+
+					if (routing_Table.get(key).getRoute_Interface()==1) {
+						// ((ARPLayer) this.GetUnderLayer(0)).Send(data2);
+					}
+					else {
+						// ((ARPLayer) this.GetUnderLayer(1)).Send(data2);
+					}						
 				}
 			}
 		}
