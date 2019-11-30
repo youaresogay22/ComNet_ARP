@@ -161,6 +161,11 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		 myMAC = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getMY_MAC_ADDRESS();
 		((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(myMAC);
 		((TCPLayer) m_LayerMgr.GetLayer("TCP")).GratSend("".getBytes(), 0);
+		
+		byte[] myMAC2 = new byte[6];
+		myMAC2 = ((ARPLayer) m_LayerMgr.GetLayer("ARP2")).getMY_MAC_ADDRESS();
+		((ARPLayer) m_LayerMgr.GetLayer("ARP2")).setSrcMAC(myMAC2);
+		((TCPLayer) m_LayerMgr.GetLayer("TCP2")).GratSend("".getBytes(), 0);
 	}
 	
 	//1.TTL로 제거되는 ARP Cache entry를 GUI에 실시간으로 반영해야 한다. 
