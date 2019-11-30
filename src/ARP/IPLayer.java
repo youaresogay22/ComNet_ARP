@@ -183,23 +183,43 @@ public class IPLayer implements BaseLayer {
 		for (int i=0; i<10; i++) {	// Routing Table 검색을 위한 for문, Routing 테이블 한줄한줄 읽기
 									// * 임시로 i<10 넣어둠, 수정해야함
 			
-			// rt_dstAddr에 RoutingTable의 모든 Destination Address 저장
+			// Routing Table의  Destination Address
 			byte[] rt_dstAddr = routingTable[i].getDstAddr();
+			// Routing Table의 FlagUp
+			boolean rt_flagUp = routingTable[i].getFlagUp();
+			// * Routing Table의 FlagGateway, 필요 없을 지도?
+			boolean rt_flagGateway = routingTable[i].getFlagGateway();
 			
-			// rt_subnetMask에 RoutingTable의 모든 Subnet mask 저장
-			for (int j=0; j<4; j++) {
-				byte[] rt_subnetMask = routingTable[j].getSubnetMask();
-				
-				// input의 목적주소와 Routing Table의 서브넷 마스크를 연산하여
-				// 같으면 IPLayer1의 하위 레이어로 보내고 다르면 IPLayer2의 하위 레이어로 보냄
-				if (rt_dstAddr[j] == (dstAddr[j] & rt_subnetMask[j])) {
-					
+			// * 시나리오
+			// 1. Host Address 검색 -> 있으면 flag 확인하여 하위레이어로 보냄
+			// 2. 서브넷마스크 연산하여 검색 -> 있으면 flag 확인하여 하위레이어로 보냄
+			// 3. * Default entry 검색 -> ???
+			
+			if (rt_dstAddr[i] == dstAddr[i]) {
+				if (rt_flagUp == true) {
+					// * IPLayer1 하위레이어로 보내는거 추가해야함
 				} else {
-					
+					// * IPLayer2 하위레이어로 보내는거 추가해야함
+				}
+			} else {
+				// Routing Table의 Subnet mask
+				byte[] rt_subnetMask = routingTable[i].getSubnetMask();
+				
+				for (int j=0; j<4; j++) {
+					// * 연산하는 법, 클래스 확인
+					if (rt_dstAddr[j] == (dstAddr[j] & rt_subnetMask[j])) {
+						if (rt_flagUp == true) {
+							// * IPLayer1 하위레이어로 보내는거 추가해야함
+						} else {
+							// * IPLayer2 하위레이어로 보내는거 추가해야함
+						}
+					} else {
+						// * Default entry 검색 추가해아함	
+					}
 				}
 			}
 		}
-		return false;
+		return true;
 	}
 
 	public boolean Receive() {
