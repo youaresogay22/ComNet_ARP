@@ -241,8 +241,12 @@ public class IPLayer implements BaseLayer {
 					if (routing_Table.get(key).getRoute_Interface()==1) {
 						this.GetUnderLayer(0).Send(data, data.length);
 					}
-					else {
+					else if (routing_Table.get(key).getRoute_Interface()==2) {
 						this.otherIPLayer.Send(data, data.length);
+					
+					}
+					else {	// Interface가 1,2 둘 다 아닌 경우 break
+						break;
 					}
 
 				// Flag UG인 경우, FlagUp=true, FlagGateway=true	
@@ -260,10 +264,17 @@ public class IPLayer implements BaseLayer {
 						// * Gateway address를 IPLayer1 하위레이어로 보내야함
 						this.GetUnderLayer(0).Send(data, data.length);
 					}
-					else {
+					else if (routing_Table.get(key).getRoute_Interface()==2) {
 						// * Gateway address를 IPLayer2 하위레이어로 보내야함
 						this.otherIPLayer.Send(data, data.length);
+					} 
+					else {	// Interface가 1,2 둘 다 아닌 경우 break
+						break;
 					}
+					
+				// U, UG 둘 다 아닐 경우 break
+				} else {
+					break;
 				}
 					
 			} else {	// subnet_check == 0, Default entry로 보냄
@@ -280,9 +291,12 @@ public class IPLayer implements BaseLayer {
 				if (routing_Table.get(key).getRoute_Interface()==1) {
 					this.GetUnderLayer(0).Send(data, data.length);
 				}
-				else {
+				else if (routing_Table.get(key).getRoute_Interface()==2) {
 					this.otherIPLayer.Send(data, data.length);
-				}						
+				}
+				else {	// Interface가 1,2 둘 다 아닌 경우 break
+					break;
+				}
 			}
 			return true;
 		}
