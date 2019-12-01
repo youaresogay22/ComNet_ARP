@@ -229,49 +229,59 @@ public class IPLayer implements BaseLayer {
 					}
 				}
 			}
-				
+			
+			
+			//  하위 레이어로 보내기
+			
 			if (subnet_check == 1) {
 
 				// Flag U인 경우, FlagUp=true, FlagGateway=false
 				if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==false) {
 						
 					if (routing_Table.get(key).getRoute_Interface()==1) {
-						// ((ARPLayer) this.GetUnderLayer(0)).Send(data, data.length);
+						this.GetUnderLayer(0).Send(data, data.length);
 					}
-					else if (routing_Table.get(key).getRoute_Interface()==2) {
-						// ((ARPLayer) this.GetUnderLayer(1)).Send(data, data.length);
+					else {
+						this.otherIPLayer.Send(data, data.length);
 					}
 
-					// Flag UG인 경우, FlagUp=true, FlagGateway=true	
+				// Flag UG인 경우, FlagUp=true, FlagGateway=true	
 				} else if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==true) {
-						
 					
-						
 					String st_rt_gateway = routing_Table.get(key).getGateway();
 					byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
+					
+					data[16] = rt_gateway[0];
+					data[17] = rt_gateway[1];
+					data[18] = rt_gateway[2];
+					data[19] = rt_gateway[3];	
 
 					if (routing_Table.get(key).getRoute_Interface()==1) {
 						// * Gateway address를 IPLayer1 하위레이어로 보내야함
-						this.GetUnderLayer(0).Send();
+						this.GetUnderLayer(0).Send(data, data.length);
 					}
 					else {
 						// * Gateway address를 IPLayer2 하위레이어로 보내야함
-						this.otherIPLayer.Send();
+						this.otherIPLayer.Send(data, data.length);
 					}
 				}
 					
 			} else {	// subnet_check == 0, Default entry로 보냄
 						
 				// * 라우팅 테이블의 Gateway address를 내려보내야함
-						
-				String st_rt_gateway = routing_Table.get(key).getGateway();
+				String st_rt_gateway = routing_Table.get("0,0,0,0").getGateway();
 				byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
+				
+				data[16] = rt_gateway[0];
+				data[17] = rt_gateway[1];
+				data[18] = rt_gateway[2];
+				data[19] = rt_gateway[3];	
 
 				if (routing_Table.get(key).getRoute_Interface()==1) {
-					// ((ARPLayer) this.GetUnderLayer(0)).Send(data2);
+					this.GetUnderLayer(0).Send(data, data.length);
 				}
 				else {
-					// ((ARPLayer) this.GetUnderLayer(1)).Send(data2);
+					this.otherIPLayer.Send(data, data.length);
 				}						
 			}
 			return true;
