@@ -24,7 +24,7 @@ public class RoutingTable {
 //	private int RT_Class;				// Subnet 클래스 구분, 필요하면 추가
 	
 	public RoutingTable() {
-		
+		  
 		RT_dstAddr = new byte[4];
 		RT_subnetMask = new byte[4];
 		RT_gateway = null;
