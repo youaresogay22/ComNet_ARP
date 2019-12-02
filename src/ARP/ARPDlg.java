@@ -6,7 +6,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.net.Inet4Address;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -31,9 +30,8 @@ import ARP.ARPLayer._Cache_Entry;
 import ARP.ARPLayer._Proxy_Entry;
 import ARP.RoutingTable._Routing_Entry;
 
-
 // ARP cache Table을 쓰레드 없이 갱신할 수 있나? (TTL때문)
-// ConnectLayers
+// 자료구조가 두 갈래 레이어에 적절하게 분배되고 있는지?
 
 @SuppressWarnings("serial")
 public class ARPDlg extends JFrame implements BaseLayer {
@@ -105,12 +103,35 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		m_LayerMgr.AddLayer(new ARPLayer("ARP2"));
 		m_LayerMgr.AddLayer(new IPLayer("IP2"));
 		m_LayerMgr.AddLayer(new TCPLayer("TCP2"));
+				
+		// old
+		//m_LayerMgr.ConnectLayers("NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ) ) ) (*GUI) NI2 ( *ETHERNET2 ( *ARP2 +IP2 ( -ARP2 *TCP2 ) ) ) (*GUI) ");
+
+		// new
+		m_LayerMgr.ConnectLayers("NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) ) (null) NI2 ( *ETHERNET2 ( *ARP2 +IP2 ( -ARP2 *TCP2 ( *GUI ) ) ) )");
 		
-		// IP레이어 간 연결하는 코드 추가
-		// RoutingTable, proxyTable, ARPCacheTAble 자료구조를 "IP1"과 "IP2"에 분배?
+		// IP 레이어에 IP2 레이어 정보를 set한다. 그 반대도 마찬가지.
+		((IPLayer) m_LayerMgr.GetLayer("IP")).setOtherIPLayer((IPLayer) m_LayerMgr.GetLayer("IP2"));
+		((IPLayer) m_LayerMgr.GetLayer("IP2")).setOtherIPLayer((IPLayer) m_LayerMgr.GetLayer("IP"));
+
+		//print for debug
+		//GUI에서 두 개의 TCP로 갈라져 나오는 구조. GUI.getUnderLayer(0) = TCP, GUI.getUnderLayer(1) = TCP2
+		//원래는 ARP에서 Ethernet으로 일방향 연결이어야 한다. 하지만 여기서는 ARP와 Ethernet이 양방향으로 연결되게끔 구현했다.
+		System.out.println("---------------------------------");
+		System.out.println(m_LayerMgr.GetLayer("ETHERNET").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("ARP").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("IP").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("TCP").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("GUI").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("TCP").GetUpperLayer(0).GetLayerName());
 		
-		m_LayerMgr.ConnectLayers(" NI ( *ETHERNET ( *ARP +IP ( -ARP *TCP ( *GUI ) ) ) )");
-		m_LayerMgr.ConnectLayers(" NI2 ( *ETHERNET2 ( *ARP2 +IP2 ( -ARP2 *TCP2 ( *GUI ) ) ) )");
+		System.out.println("\n" + m_LayerMgr.GetLayer("ETHERNET2").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("ARP2").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("IP2").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("TCP2").GetUnderLayer(0).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("GUI").GetUnderLayer(1).GetLayerName());
+		System.out.println(m_LayerMgr.GetLayer("TCP2").GetUpperLayer(0).GetLayerName());
+		System.out.println("---------------------------------");
 		
 		((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(0);//PC마다 다르다. 0번이 아닐 수도 있기 때문에, 탐색하는 함수를 만들면 편할듯
 	//	((NILayer) m_LayerMgr.GetLayer("NI2")).SetAdapterNumber(1);
@@ -119,7 +140,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		Runnable task = () -> {
 			while (true) {
 				try {
-					
 					Thread.sleep(2000);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
@@ -130,7 +150,6 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		//위 기능을 수행하는 쓰레드 생성 및 시작.
 		Thread cacheUpdate = new Thread(task,"cacheUpdataThread");
 		cacheUpdate.start();
-		
 		
 		// 2초마다 gratSend()를 호출하는 함수
 		Runnable GARPTask = () -> {
@@ -146,7 +165,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 				runGratSend();
 			}
 		};
-		
+
 		Thread runGARP = new Thread(GARPTask, "runningGARP");
 		runGARP.start();
 		
@@ -156,9 +175,9 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	}
 	
 	public static void runGratSend() {
-		 byte[] myMAC = new byte[6];
-		 // ARPLayer가 생성되고 난 뒤에(== getMyPCAddr()함수가 호출된 다음에) 쓰레드가 start..
-		 myMAC = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getMY_MAC_ADDRESS();
+		byte[] myMAC = new byte[6];
+		// ARPLayer가 생성되고 난 뒤에(== getMyPCAddr()함수가 호출된 다음에) 쓰레드가 start..
+		myMAC = ((ARPLayer) m_LayerMgr.GetLayer("ARP")).getMY_MAC_ADDRESS();
 		((ARPLayer) m_LayerMgr.GetLayer("ARP")).setSrcMAC(myMAC);
 		((TCPLayer) m_LayerMgr.GetLayer("TCP")).GratSend("".getBytes(), 0);
 		
@@ -486,6 +505,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 				proxyPopupFrame.dispose(); 						// 팝업창을 끈다
 		}
 	}
+	
 	// popup에서 값을 입력후 Add버튼을 눌렀을 때 자료구조와 GUI에 entry를 추가하는 함수
 	public void addNewEntry(JTable table) {
 		if(table == routingTable) {
@@ -601,7 +621,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		};
 		return model;
 	}
-	// String[] IP -> byte[] IP
+	// String IP -> byte[] IP
 	// xxx.xxx.xxx.xxx -> byte[]
 	public byte[] strIPToByteArray(String str) {
 		byte[] bytes = new byte[4];
@@ -660,20 +680,20 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	}
 
 	// old
-	@Override
-	public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
-		if (pUnderLayer == null)
-			return;
-		this.p_UnderLayer = pUnderLayer;
-	}
-	
-	// new
 	//@Override
 	//public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
 	//	if (pUnderLayer == null)
 	//		return;
-	//	this.p_aUnderLayer.add(nUnderLayerCount++, pUnderLayer);
+	//	this.p_UnderLayer = pUnderLayer;
 	//}
+	
+	// new
+	@Override
+	public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
+		if (pUnderLayer == null)
+			return;
+		this.p_aUnderLayer.add(nUnderLayerCount++, pUnderLayer);
+	}
 
 	@Override
 	public void SetUpperLayer(BaseLayer pUpperLayer) { // 상위 레이어 설정
@@ -689,20 +709,20 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	}
 
 	// old
-	@Override
-	public BaseLayer GetUnderLayer() { // 하위 레이어 반환
-		if (p_UnderLayer == null)
-			return null;
-		return p_UnderLayer;
-	}
+	//@Override
+	//public BaseLayer GetUnderLayer() { // 하위 레이어 반환
+	//	if (p_UnderLayer == null)
+	//		return null;
+	//	return p_UnderLayer;
+	//}
 	
 	// new
-	//@Override
-	//public BaseLayer GetUnderLayer(int nindex) { // 상위 레이어 반환
-	//	if (nindex < 0 || nindex > nUnderLayerCount || nUnderLayerCount < 0)
-	//		return null;
-	//	return p_aUnderLayer.get(nindex);
-	//}
+	@Override
+	public BaseLayer GetUnderLayer(int nindex) { // 상위 레이어 반환
+		if (nindex < 0 || nindex > nUnderLayerCount || nUnderLayerCount < 0)
+			return null;
+		return p_aUnderLayer.get(nindex);
+	}
 
 	@Override
 	public BaseLayer GetUpperLayer(int nindex) { // 상위 레이어 반환

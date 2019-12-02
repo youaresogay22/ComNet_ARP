@@ -11,7 +11,7 @@ interface BaseLayer {
 
 	public String GetLayerName();		//Layer의 이름을 반환한다.
 
-	public BaseLayer GetUnderLayer();	//하위계층의 이름을 반환한다.
+	public BaseLayer GetUnderLayer(int nindex);	//하위계층의 이름을 반환한다.
 
 	public BaseLayer GetUpperLayer(int nindex);	//index번째 상위계층을 반환한다.
 

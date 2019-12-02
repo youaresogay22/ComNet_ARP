@@ -4,6 +4,8 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 public class TCPLayer implements BaseLayer {
+	public int nUnderLayerCount =0;
+	public ArrayList<BaseLayer> p_aUnderLayer = new ArrayList<BaseLayer>();
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
@@ -93,14 +95,14 @@ public class TCPLayer implements BaseLayer {
 	public boolean Send(byte[] input, int length) {
 		byte[] TCP_header_added_bytes = ObjToByte(m_tHeader, input, length);
 
-		this.GetUnderLayer().Send(TCP_header_added_bytes, TCP_header_added_bytes.length);
+		this.GetUnderLayer(0).Send(TCP_header_added_bytes, TCP_header_added_bytes.length);
 		return false;
 	}
 	
 	public boolean GratSend(byte[] input, int length) {
 		byte[] TCP_header_added_bytes = ObjToByte(m_tHeader, input, length);
 
-		this.GetUnderLayer().GratSend(TCP_header_added_bytes, TCP_header_added_bytes.length);
+		this.GetUnderLayer(0).GratSend(TCP_header_added_bytes, TCP_header_added_bytes.length);
 		return false;
 	}
 
@@ -117,49 +119,61 @@ public class TCPLayer implements BaseLayer {
 		return false;
 	}
 
-	@Override
-	public void SetUnderLayer(BaseLayer pUnderLayer) {
-		// TODO Auto-generated method stub
-		if (pUnderLayer == null)
-			return;
-		this.p_UnderLayer = pUnderLayer;
-	}//인코딩
+	// old
+		//@Override
+		//public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
+		//	if (pUnderLayer == null)
+		//		return;
+		//	this.p_UnderLayer = pUnderLayer;
+		//}
+		
+		// new
+		@Override
+		public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
+			if (pUnderLayer == null)
+				return;
+			this.p_aUnderLayer.add(nUnderLayerCount++, pUnderLayer);
+		}
 
-	@Override
-	public void SetUpperLayer(BaseLayer pUpperLayer) {
-		// TODO Auto-generated method stub
-		if (pUpperLayer == null)
-			return;
-		this.p_aUpperLayer.add(nUpperLayerCount++, pUpperLayer);
-		// nUpperLayerCount++;
-	}
+		@Override
+		public void SetUpperLayer(BaseLayer pUpperLayer) { // 상위 레이어 설정
+			if (pUpperLayer == null)
+				return;
+			this.p_aUpperLayer.add(nUpperLayerCount++, pUpperLayer);
+			// nUpperLayerCount++;
+		}
 
-	@Override
-	public String GetLayerName() {
-		// TODO Auto-generated method stub
-		return pLayerName;
-	}
+		@Override
+		public String GetLayerName() { // 레이어 이름 반환
+			return pLayerName;
+		}
 
-	@Override
-	public BaseLayer GetUnderLayer() {
-		// TODO Auto-generated method stub
-		if (p_UnderLayer == null)
-			return null;
-		return p_UnderLayer;
-	}
+		// old
+		//@Override
+		//public BaseLayer GetUnderLayer() { // 하위 레이어 반환
+		//	if (p_UnderLayer == null)
+		//		return null;
+		//	return p_UnderLayer;
+		//}
+		
+		// new
+		@Override
+		public BaseLayer GetUnderLayer(int nindex) { // 상위 레이어 반환
+			if (nindex < 0 || nindex > nUnderLayerCount || nUnderLayerCount < 0)
+				return null;
+			return p_aUnderLayer.get(nindex);
+		}
 
-	@Override
-	public BaseLayer GetUpperLayer(int nindex) {
-		// TODO Auto-generated method stub
-		if (nindex < 0 || nindex > nUpperLayerCount || nUpperLayerCount < 0)
-			return null;
-		return p_aUpperLayer.get(nindex);
-	}
+		@Override
+		public BaseLayer GetUpperLayer(int nindex) { // 상위 레이어 반환
+			if (nindex < 0 || nindex > nUpperLayerCount || nUpperLayerCount < 0)
+				return null;
+			return p_aUpperLayer.get(nindex);
+		}
 
-	@Override
-	public void SetUpperUnderLayer(BaseLayer pUULayer) {
-		this.SetUpperLayer(pUULayer);
-		pUULayer.SetUnderLayer(this);
-
-	}
+		@Override
+		public void SetUpperUnderLayer(BaseLayer pUULayer) { // 매개변수로 받은 레이어를 상위레이어로 세팅하고, 그 레이어의 하위를 함수를 호출한 객체로 저장
+			this.SetUpperLayer(pUULayer);
+			pUULayer.SetUnderLayer(this);
+		}
 }
