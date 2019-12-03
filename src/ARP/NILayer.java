@@ -50,41 +50,51 @@ public class NILayer implements BaseLayer {
 		int deviceLen = 0;
 		int cnt =0;
 
-		System.out.println("\n----------------------------NILayer : SetAdapterNumber() ------------------------------------");
-		for (PcapIf device : m_pAdapterList) {		// m_pAdapterList 수 만큼 반복 -> deviceLen
-			for(byte[] mac : bytesMAC) {			// bytesMAC 수 만큼 반복
-				if(deviceLen == iNum) {				// setAdapterNumber(iNum)과 isUp m_pAdapterList(deviceLen)이 같을 때 (인덱스)
-					for(int j=0; j<6; j++) {
-						if(mac[j] == device.getHardwareAddress()[j])
-							cnt++;
-						if(cnt == 6) {				// cnt가 6이면, byte[6] 형태의 mac 주소가 일치하는 것
-							System.out.println("\n일치! cnt = " + cnt +" , index = " + deviceLen);
-							System.out.println(m_pAdapterList.get(deviceLen).getDescription());
-							System.out.println(m_pAdapterList.get(deviceLen).getAddresses().get(0));
-							System.out.println();
-							
-							m_iNumAdapter = deviceLen;
+		System.out.println(
+				"\n----------------------------NILayer : SetAdapterNumber() ------------------------------------");
+		for (PcapIf device : m_pAdapterList) { // m_pAdapterList 수 만큼 반복 -> deviceLen
+
+			for (byte[] mac : bytesMAC) { // bytesMAC 수 만큼 반복 if(deviceLen == iNum)
+				{ // setAdapterNumber(iNum)과 isUp
+					// m_pAdapterList(deviceLen)이 같을 때 (인덱스)
+					for (int j = 0; j < 6; j++) {
+						if (!device.getAddresses().isEmpty()) {
+							if (mac[j] == device.getHardwareAddress()[j])
+								cnt++;
+							if (cnt == 6) { // cnt가 6이면, byte[6] 형태의 mac 주소가 일치하는 것
+								System.out.println("\n일치! cnt = " + cnt + " , index = " + deviceLen);
+								System.out.println(m_pAdapterList.get(deviceLen).getDescription());
+								System.out.println(m_pAdapterList.get(deviceLen).getAddresses().get(0));
+								System.out.println();
+
+								m_iNumAdapter = deviceLen;
+							}
+
 						}
 					}
 				}
-				cnt=0;
+				cnt = 0;
 			}
-			
+
 			// print for debug
 			String description = (device.getDescription() != null) ? device.getDescription() : "장비에 대한 설명이 없습니다.";
-			System.out.printf("[%d번]: %s [%s] [%s]\n", deviceLen, device.getName(), description, device.getAddresses().get(0));
-			try {
-				System.out.printf("%d %d %d %d %d %d\n", device.getHardwareAddress()[0], device.getHardwareAddress()[1],
-						device.getHardwareAddress()[2], device.getHardwareAddress()[3], device.getHardwareAddress()[4],
-						device.getHardwareAddress()[5]);
-			} catch (IOException e) {
-				e.printStackTrace();
+			System.out.printf("[%d번]: %s [%s] \n", deviceLen, device.getName(), description);
+			if (!device.getAddresses().isEmpty()) {
+				System.out.println(device.getAddresses().get(0));
+				try {
+					System.out.printf(" %d %d %d %d %d %d\n", device.getHardwareAddress()[0],
+							device.getHardwareAddress()[1], device.getHardwareAddress()[2],
+							device.getHardwareAddress()[3], device.getHardwareAddress()[4],
+							device.getHardwareAddress()[5]);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
-			
+
 			deviceLen++;
 		}
 		System.out.println("-----------------------------------------------------------------------------");
-		
+
 		PacketStartDriver();
 		Receive();
 	}
