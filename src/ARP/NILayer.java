@@ -93,7 +93,10 @@ public class NILayer implements BaseLayer {
 		
 		// 현재 컴퓨터에 존재하는 모든 네트워크 어뎁터 목록 가져오기
 		int r = Pcap.findAllDevs(m_pAdapterList, errbuf);
+<<<<<<< HEAD
 		
+=======
+>>>>>>> b6858c5b39d5e7dda2244c42076b95e361f2fdc9
 		// 네트워크 어뎁터가 하나도 존재하지 않을 경우 에러 처리
 		if (r == Pcap.NOT_OK || m_pAdapterList.isEmpty())
 			System.out.println("[Error] 네트워크 어댑터를 읽지 못하였습니다. Error : " + errbuf.toString());
