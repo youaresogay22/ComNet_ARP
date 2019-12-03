@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import ARP.RoutingTable._Routing_Entry;
+import static ARP.ARPDlg.rtClass;
 
 public class IPLayer implements BaseLayer {
 	public int nUnderLayerCount =0;
@@ -18,8 +19,7 @@ public class IPLayer implements BaseLayer {
 	IPLayer otherIPLayer;
 	
 	public Map<String, _Routing_Entry> routing_Table;
-	static RoutingTable rtClass = new RoutingTable();
-	static Set<String> routing_Table_Itr;
+	static Set<String> routing_Table_Itr = rtClass.routing_Table_Itr;
 
 	// router: _IP_ADDR class moved from ARPlayer to IPlayer
 	public static class _IP_ADDR {
@@ -210,7 +210,7 @@ public class IPLayer implements BaseLayer {
 			// 2. 서브넷마스크 연산하여 검색 -> 있으면 flag 확인, 인터페이스 확인 후, 하위레이어로 보냄
 			// 3. * Default entry 검색 
 			
-			if (dstAddr==rt_dstAddr) {
+			if (dstAddr.equals(rt_dstAddr)) {
 				// 출발 주소와 목적 주소가 같은 경우 drop
 				break;
 				
@@ -238,11 +238,13 @@ public class IPLayer implements BaseLayer {
 
 				// Flag U인 경우, FlagUp=true, FlagGateway=false
 				if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==false) {
-						
+					System.out.println("flag =U");
 					if (routing_Table.get(key).getRoute_Interface()==1) {
+						System.out.println("GetUnderLayer(0)");
 						this.GetUnderLayer(0).Send(data, data.length);
 					}
 					else if (routing_Table.get(key).getRoute_Interface()==2) {
+						System.out.println("GetotherIPLayer");
 						this.otherIPLayer.Send(data, data.length);
 					
 					}
@@ -252,7 +254,7 @@ public class IPLayer implements BaseLayer {
 
 				// Flag UG인 경우, FlagUp=true, FlagGateway=true	
 				} else if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==true) {
-					
+					System.out.println("flag =UG");
 					String st_rt_gateway = routing_Table.get(key).getGateway();
 					byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
 					
@@ -279,9 +281,9 @@ public class IPLayer implements BaseLayer {
 				}
 					
 			} else {	// subnet_check == 0, Default entry로 보냄
-						
+				System.out.println("subnet_check == 0");	
 				// * 라우팅 테이블의 Gateway address를 내려보내야함
-				String st_rt_gateway = routing_Table.get("0,0,0,0").getGateway();
+				String st_rt_gateway = routing_Table.get("0.0.0.0").getGateway();
 				byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
 				
 				data[16] = rt_gateway[0];
@@ -301,6 +303,7 @@ public class IPLayer implements BaseLayer {
 			}
 			return true;
 		}
+		System.out.println("쓰레기값입니다.");
 		return false;
 	}
 

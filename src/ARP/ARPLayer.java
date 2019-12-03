@@ -12,9 +12,8 @@ import static ARP.EthernetLayer.byte4To2;
 import static ARP.EthernetLayer.intToByte;
 import static ARP.IPLayer._IP_ADDR;
 
-
 public class ARPLayer implements BaseLayer {
-	public int nUnderLayerCount =0;
+	public int nUnderLayerCount = 0;
 	public ArrayList<BaseLayer> p_aUnderLayer = new ArrayList<BaseLayer>();
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
@@ -109,7 +108,7 @@ public class ARPLayer implements BaseLayer {
 		ResetHeader();
 		run_Clean_Thread(cache_Table, cache_Itr);
 		// 캐시테이블 자동 제거 스레드
-		
+
 		// 디버깅
 		String target_IP = "111.111.111.111";
 		_Cache_Entry cache_Entry = // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
@@ -187,7 +186,7 @@ public class ARPLayer implements BaseLayer {
 	public Map<String, _Cache_Entry> getCacheList() {
 		return cache_Table;
 	}
-	
+
 	public byte[] getMY_MAC_ADDRESS() {
 		return MY_MAC_ADDRESS.addr;
 	}
@@ -208,8 +207,36 @@ public class ARPLayer implements BaseLayer {
 		return false;
 	}
 
+	public boolean isARPRequest(byte[] input) {
+		if (input[7] == (byte) 0x01)
+			return true;
+		return false;
+	}
+
 	public boolean Send(byte[] input, int length) {
-		if (cameFromDlg(input)) { // 비어 있는 byte[]다 -> Dlg에서 왔다 -> Send Request Message.
+
+		/*
+		 * 해야 하는 것: ARP 레이어로 내려온 IP 패킷을 전송하기 
+		 * 전송하기 위해 해야 할 일: 
+		 * 1.IP 패킷(이 경우 parameter인byte[] input)을 send 내부에서 가지고 있는다. 
+		 * 2.캐시 테이블의 이터레이터가 input의 16-19번째 바이트와 일치하는지 탐색한다.
+		 * 3-1. 캐시 테이블에 해당하는 IP주소가 있으면 해당 MAC 주소로 IP패킷을 보낸다. 끝.
+		 * 3-2. 캐시 테이블에 해당하는 IP주소가 없으면 해당 IP주소에 ARP request message를 보낸다.
+		 * 4-2. ARP reply가 도착하면 캐시 테이블이 업데이트된다. 이제 2로 돌아간다.
+		 */
+		//상세한 내용은 깃허브 마일스톤을 확인하세요.
+		
+		// 12/03 수정: Send Reply Message: input이 ARP request(opcode=2)인 경우 ARP reply를 보냄
+		if (isARPRequest(input)) {  
+			for (int i = 0; i < 6; i++)
+				input[i + 18] = MY_MAC_ADDRESS.addr[i]; // 패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
+			input = swappingAddr(input); // src 주소 <-> target 주소 swapping
+			input[6] = (byte) 0x00; // setOpCode(2)
+			input[7] = (byte) 0x02;
+			this.GetUnderLayer(0).Send(input, input.length); // Send Reply Message
+			
+		// 12/03 수정: ARP request가 아닌 모든 경우 ARP request를 보낸다.
+		} else {
 			setARPHeaderBeforeSend(); // opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
 			setSrcMAC(MY_MAC_ADDRESS.addr);
 			setSrcIPAddr(MY_IP_ADDRESS.addr);
@@ -224,13 +251,6 @@ public class ARPLayer implements BaseLayer {
 				cache_Table.put(target_IP, cache_Entry);
 
 			this.GetUnderLayer(0).Send(ARP_header_added_bytes, ARP_header_added_bytes.length); // Send Request Message
-		} else { // byte[]가 비어있지 않다 -> Send Reply Message
-			for (int i = 0; i < 6; i++)
-				input[i + 18] = MY_MAC_ADDRESS.addr[i]; // 패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
-			input = swappingAddr(input); // src 주소 <-> target 주소 swapping
-			input[6] = (byte) 0x00; // setOpCode(2)
-			input[7] = (byte) 0x02;
-			this.GetUnderLayer(0).Send(input, input.length); // Send Reply Message
 		}
 		return false;
 	}
@@ -409,7 +429,7 @@ public class ARPLayer implements BaseLayer {
 				if (networkInterface.getHardwareAddress() != null) {// loop back Interface가 null이므로, 걸러준다.
 					MY_MAC_ADDRESS.addr = networkInterface.getHardwareAddress(); // MAC주소 받기
 					MY_IP_ADDRESS.addr = networkInterface.getInetAddresses().nextElement().getAddress(); // IP주소 받기
-					
+
 					break; // 현재 사용중인 NIC 이외에는 필요 없다. 반복문 탈출
 				}
 			}
@@ -434,6 +454,7 @@ public class ARPLayer implements BaseLayer {
 			this.my_cache_Table = cachetable;
 			this.my_cache_Itr = cacheIterator;
 		}
+
 		@Override
 		public void run() {
 			ArrayList<String> willRemoved = new ArrayList<String>();
