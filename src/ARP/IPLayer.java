@@ -1,6 +1,7 @@
 package ARP;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -9,15 +10,15 @@ import ARP.RoutingTable._Routing_Entry;
 import static ARP.ARPDlg.rtClass;
 
 public class IPLayer implements BaseLayer {
-	public int nUnderLayerCount =0;
+	public int nUnderLayerCount = 0;
 	public ArrayList<BaseLayer> p_aUnderLayer = new ArrayList<BaseLayer>();
 	public int nUpperLayerCount = 0;
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
-	
+
 	IPLayer otherIPLayer;
-	
+
 	public Map<String, _Routing_Entry> routing_Table;
 	static Set<String> routing_Table_Itr = rtClass.routing_Table_Itr;
 
@@ -42,8 +43,8 @@ public class IPLayer implements BaseLayer {
 			return ipString.substring(0, ipString.length() - 1);
 		}
 
-		//_IP_ADDRESS ip;
-		//ip.do_And_operation()
+		// _IP_ADDRESS ip;
+		// ip.do_And_operation()
 		// ip byte끼리의 and 연산 함수
 		public byte[] do_And_operation(byte[] sourceIP) {
 			byte[] temp = new byte[4];
@@ -83,7 +84,7 @@ public class IPLayer implements BaseLayer {
 	}
 
 	_IP_HEADER m_iHeader = new _IP_HEADER();
-	
+
 	public void setOtherIPLayer(IPLayer other) {
 		otherIPLayer = other;
 	}
@@ -169,7 +170,7 @@ public class IPLayer implements BaseLayer {
 	}
 
 	public boolean Receive(byte[] input) {
-		
+
 		routing_Table = rtClass.getRoutingList();
 		routing_Table_Itr = routing_Table.keySet();
 
@@ -181,123 +182,116 @@ public class IPLayer implements BaseLayer {
 		data = new byte[input.length];
 		System.arraycopy(input, 0, data, 0, input.length);
 
-		byte[] srcAddr = new byte[4];	// input의 src주소만 빼서 따로 저장
+		byte[] srcAddr = new byte[4]; // input의 src주소만 빼서 따로 저장
 		srcAddr[0] = input[12];
 		srcAddr[1] = input[13];
 		srcAddr[2] = input[14];
 		srcAddr[3] = input[15];
-		
-		byte[] dstAddr = new byte[4];	// input의 dst주소만 빼서 따로 저장
+
+		byte[] dstAddr = new byte[4]; // input의 dst주소만 빼서 따로 저장
 		dstAddr[0] = input[16];
 		dstAddr[1] = input[17];
 		dstAddr[2] = input[18];
 		dstAddr[3] = input[19];
 
-		int subnet_check = 0;	// Routing Table 목적 주소 중 연산한 주소가 있는지 없는지 체크, 없으면 0 있으면 1
-		
-		for (String key : routing_Table_Itr) {	// Routing Table 검색을 위한 for문, Routing 테이블 한줄한줄 읽기
-			
+		int subnet_check = 0; // Routing Table 목적 주소 중 연산한 주소가 있는지 없는지 체크, 없으면 0 있으면 1
+
+		for (String key : routing_Table_Itr) { // Routing Table 검색을 위한 for문, Routing 테이블 한줄한줄 읽기
+
 			// Routing Table의 Destination Address
 			String st_rt_dstAddr = key;
-			byte[] rt_dstAddr = strIPToByteArray(st_rt_dstAddr); 
+			byte[] rt_dstAddr = strIPToByteArray(st_rt_dstAddr);
 
 			// Routing Table의 Flag, get(key) : 한줄 통째로 들고오기
 			boolean rt_flagUp = routing_Table.get(key).isFlag_Up();
 			boolean rt_flagGateway = routing_Table.get(key).isFlag_Gateway();
-			
+
 			// * 시나리오
 			// 1. Host Address 검색 -> 내 주소이면 drop
 			// 2. 서브넷마스크 연산하여 검색 -> 있으면 flag 확인, 인터페이스 확인 후, 하위레이어로 보냄
-			// 3. * Default entry 검색 
-			
-			if (dstAddr.equals(rt_dstAddr)) {
+			// 3. * Default entry 검색
+
+			// 12/3 수정: equals가 아니라 Arrays.equals입니다.
+			if (Arrays.equals(dstAddr, rt_dstAddr)) {
 				// 출발 주소와 목적 주소가 같은 경우 drop
 				break;
-				
-			
+
 			} else {
-				for (int j=0; j<4; j++) {
+				for (int j = 0; j < 4; j++) {
 					// Routing Table의 Subnet mask
 					byte[] rt_subnetMask = routing_Table.get(key).getSubnetMask();
-					
+
 					// 연산 결과 네트워크 주소와 일치하는 주소가 없으면 Routing Table을 읽는 for문에서 break
 					if (rt_dstAddr[j] != (dstAddr[j] & rt_subnetMask[j])) {
 						subnet_check = 0;
-						break;	// 일치하는 네트워크 주소가 없으면 default entry
-					}
-					else {
+						break; // 일치하는 네트워크 주소가 없으면 default entry
+					} else {
 						subnet_check = 1;
 					}
 				}
 			}
-			
-			
-			//  하위 레이어로 보내기
-			
+
+			// 하위 레이어로 보내기
+
 			if (subnet_check == 1) {
 
 				// Flag U인 경우, FlagUp=true, FlagGateway=false
-				if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==false) {
+				if (routing_Table.get(key).isFlag_Up() == true && routing_Table.get(key).isFlag_Gateway() == false) {
 					System.out.println("flag =U");
-					if (routing_Table.get(key).getRoute_Interface()==1) {
+					if (routing_Table.get(key).getRoute_Interface() == 1) {
 						System.out.println("GetUnderLayer(0)");
 						this.GetUnderLayer(0).Send(data, data.length);
-					}
-					else if (routing_Table.get(key).getRoute_Interface()==2) {
+					} else if (routing_Table.get(key).getRoute_Interface() == 2) {
 						System.out.println("GetotherIPLayer");
 						this.otherIPLayer.Send(data, data.length);
-					
-					}
-					else {	// Interface가 1,2 둘 다 아닌 경우 break
+
+					} else { // Interface가 1,2 둘 다 아닌 경우 break
 						break;
 					}
 
-				// Flag UG인 경우, FlagUp=true, FlagGateway=true	
-				} else if (routing_Table.get(key).isFlag_Up()==true && routing_Table.get(key).isFlag_Gateway()==true) {
+					// Flag UG인 경우, FlagUp=true, FlagGateway=true
+				} else if (routing_Table.get(key).isFlag_Up() == true
+						&& routing_Table.get(key).isFlag_Gateway() == true) {
 					System.out.println("flag =UG");
 					String st_rt_gateway = routing_Table.get(key).getGateway();
 					byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
-					
+
 					data[16] = rt_gateway[0];
 					data[17] = rt_gateway[1];
 					data[18] = rt_gateway[2];
-					data[19] = rt_gateway[3];	
+					data[19] = rt_gateway[3];
 
-					if (routing_Table.get(key).getRoute_Interface()==1) {
+					if (routing_Table.get(key).getRoute_Interface() == 1) {
 						// * Gateway address를 IPLayer1 하위레이어로 보내야함
 						this.GetUnderLayer(0).Send(data, data.length);
-					}
-					else if (routing_Table.get(key).getRoute_Interface()==2) {
+					} else if (routing_Table.get(key).getRoute_Interface() == 2) {
 						// * Gateway address를 IPLayer2 하위레이어로 보내야함
 						this.otherIPLayer.Send(data, data.length);
-					} 
-					else {	// Interface가 1,2 둘 다 아닌 경우 break
+					} else { // Interface가 1,2 둘 다 아닌 경우 break
 						break;
 					}
-					
-				// U, UG 둘 다 아닐 경우 break
+
+					// U, UG 둘 다 아닐 경우 break
 				} else {
 					break;
 				}
-					
-			} else {	// subnet_check == 0, Default entry로 보냄
-				System.out.println("subnet_check == 0");	
+
+			} else { // subnet_check == 0, Default entry로 보냄
+				System.out.println("subnet_check == 0");
 				// * 라우팅 테이블의 Gateway address를 내려보내야함
 				String st_rt_gateway = routing_Table.get("0.0.0.0").getGateway();
 				byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
-				
+
 				data[16] = rt_gateway[0];
 				data[17] = rt_gateway[1];
 				data[18] = rt_gateway[2];
-				data[19] = rt_gateway[3];	
+				data[19] = rt_gateway[3];
 
-				if (routing_Table.get(key).getRoute_Interface()==1) {
+				if (routing_Table.get(key).getRoute_Interface() == 1) {
 					this.GetUnderLayer(0).Send(data, data.length);
-				}
-				else if (routing_Table.get(key).getRoute_Interface()==2) {
+				} else if (routing_Table.get(key).getRoute_Interface() == 2) {
 					this.otherIPLayer.Send(data, data.length);
-				}
-				else {	// Interface가 1,2 둘 다 아닌 경우 break
+				} else { // Interface가 1,2 둘 다 아닌 경우 break
 					break;
 				}
 			}
@@ -316,7 +310,7 @@ public class IPLayer implements BaseLayer {
 		// baselayer 기본 함수, 쓸 일 없을 듯
 		return false;
 	}
-	
+
 	// String -> Byte 전환
 	public byte[] strIPToByteArray(String str) {
 		byte[] bytes = new byte[4];
