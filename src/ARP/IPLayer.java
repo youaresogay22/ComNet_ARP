@@ -213,6 +213,7 @@ public class IPLayer implements BaseLayer {
 			if (dstAddr==rt_dstAddr) {
 				// 출발 주소와 목적 주소가 같은 경우 drop
 				break;
+				
 			
 			} else {
 				for (int j=0; j<4; j++) {

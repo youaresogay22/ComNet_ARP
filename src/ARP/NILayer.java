@@ -2,8 +2,11 @@ package ARP;
 
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.List;
+
 import org.jnetpcap.Pcap;
 import org.jnetpcap.PcapIf;
 import org.jnetpcap.packet.PcapPacket;
@@ -33,9 +36,9 @@ public class NILayer implements BaseLayer {
 	}
 
 	public void PacketStartDriver() {
-		int snaplen = 64 * 1024; // Capture all packets, no trucation
-		int flags = Pcap.MODE_PROMISCUOUS; // capture all packets
-		int timeout = 10 * 1000; // 10 seconds in millis
+		int snaplen = 64 * 1024; 			 // Capture all packets, no trucation
+		int flags = Pcap.MODE_PROMISCUOUS; 	 // capture all packets
+		int timeout = 10 * 1000;			 // 10 seconds in millis
 		m_AdapterObject = Pcap.openLive(m_pAdapterList.get(m_iNumAdapter).getName(), snaplen, flags, timeout, errbuf);
 	}
 
@@ -43,16 +46,54 @@ public class NILayer implements BaseLayer {
 		return m_pAdapterList.get(iIndex);
 	}
 
-	public void SetAdapterNumber(int iNum) {
-		m_iNumAdapter = iNum;
+	public void SetAdapterNumber(List<byte[]> bytesMAC,int iNum) throws IOException {
+		int deviceLen = 0;
+		int cnt =0;
+
+		System.out.println("\n----------------------------NILayer : SetAdapterNumber() ------------------------------------");
+		for (PcapIf device : m_pAdapterList) {		// m_pAdapterList 수 만큼 반복 -> deviceLen
+			for(byte[] mac : bytesMAC) {			// bytesMAC 수 만큼 반복
+				if(deviceLen == iNum) {				// setAdapterNumber(iNum)과 isUp m_pAdapterList(deviceLen)이 같을 때 (인덱스)
+					for(int j=0; j<6; j++) {
+						if(mac[j] == device.getHardwareAddress()[j])
+							cnt++;
+						if(cnt == 6) {				// cnt가 6이면, byte[6] 형태의 mac 주소가 일치하는 것
+							System.out.println("\n일치! cnt = " + cnt +" , index = " + deviceLen);
+							System.out.println(m_pAdapterList.get(deviceLen).getDescription());
+							System.out.println(m_pAdapterList.get(deviceLen).getAddresses().get(0));
+							System.out.println();
+							
+							m_iNumAdapter = deviceLen;
+						}
+					}
+				}
+				cnt=0;
+			}
+			
+			// print for debug
+			String description = (device.getDescription() != null) ? device.getDescription() : "장비에 대한 설명이 없습니다.";
+			System.out.printf("[%d번]: %s [%s] [%s]\n", deviceLen, device.getName(), description, device.getAddresses().get(0));
+			try {
+				System.out.printf("%d %d %d %d %d %d\n", device.getHardwareAddress()[0], device.getHardwareAddress()[1],
+						device.getHardwareAddress()[2], device.getHardwareAddress()[3], device.getHardwareAddress()[4],
+						device.getHardwareAddress()[5]);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			deviceLen++;
+		}
+		System.out.println("-----------------------------------------------------------------------------");
+		
 		PacketStartDriver();
 		Receive();
 	}
 
 	public void SetAdapterList() {
+		
 		// 현재 컴퓨터에 존재하는 모든 네트워크 어뎁터 목록 가져오기
 		int r = Pcap.findAllDevs(m_pAdapterList, errbuf);
-
+		
 		// 네트워크 어뎁터가 하나도 존재하지 않을 경우 에러 처리
 		if (r == Pcap.NOT_OK || m_pAdapterList.isEmpty())
 			System.out.println("[Error] 네트워크 어댑터를 읽지 못하였습니다. Error : " + errbuf.toString());

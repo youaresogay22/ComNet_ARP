@@ -288,9 +288,15 @@ public class EthernetLayer implements BaseLayer {
 				}
 			}
 		}
-
+		
+		// router 과제 추가 사항:
+		if (IsItIP(input)) {
+			data = RemoveEtherHeader(input, input.length);
+			this.GetUpperLayer(1).Receive(data);
+			return true;
+		}
 		// ARP 과제 추가 사항:
-		if (IsItARP(input)) {// ARP이고
+		else if (IsItARP(input)) {// ARP이고
 			Mine = IsItMine(input);
 			Broadcast = IsItBroadcast(input);
 			if (Mine == true || Broadcast == true) {// 수신자가 나이거나 broadcast이면

@@ -400,8 +400,7 @@ public class ARPLayer implements BaseLayer {
 	}
 
 	public void getMyPCAddr() throws SocketException {
-		Enumeration<NetworkInterface> interfaces = null;
-		interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
+		Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
 
 		// isUP 중에 MAC과 IP 주소를 출력
 		while (interfaces.hasMoreElements()) {
@@ -410,7 +409,7 @@ public class ARPLayer implements BaseLayer {
 				if (networkInterface.getHardwareAddress() != null) {// loop back Interface가 null이므로, 걸러준다.
 					MY_MAC_ADDRESS.addr = networkInterface.getHardwareAddress(); // MAC주소 받기
 					MY_IP_ADDRESS.addr = networkInterface.getInetAddresses().nextElement().getAddress(); // IP주소 받기
-
+					
 					break; // 현재 사용중인 NIC 이외에는 필요 없다. 반복문 탈출
 				}
 			}

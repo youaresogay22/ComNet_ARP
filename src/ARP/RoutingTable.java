@@ -112,8 +112,12 @@ public class RoutingTable {
 
 			String str = byteArrayToBinaryString(input_subnetMask); 	// byte[] subnetMask를 binary String으로 변환
 			additional.setSubnetLen(checkOne(str)); 					// binary String에서 1의 개수를 구해서 자료구조 subnetLen으로 set
-			if (additional.getSubnetLen() == 0) 						// subnetLen이 0이면 GUI에서 subnet 입력이 잘못된 것, 따라서 자료구조에 put하지 않는다
-				System.out.println("올바른 형식의 서브넷 마스크를 입력하시오");
+			if (additional.getSubnetLen() == 0) {						// subnetLen이 0이면 GUI에서 subnet 입력이 잘못된 것, 따라서 자료구조에 put하지 않는다
+				if(str.equals("00000000000000000000000000000000"))		// 0.0.0.0 (/0) 또한 subnetLen이 0이다. 그러나 서브넷으로 입력받을 수 있다.
+					routing_Table.put(input_destAddress, additional);
+				else	
+					System.out.println("올바른 형식의 서브넷 마스크를 입력하시오");
+			}
 			else
 				routing_Table.put(input_destAddress, additional);
 			
@@ -142,7 +146,7 @@ public class RoutingTable {
 		return result.toString();
 	}
 
-	// BinaryString에서 연속되는 1이 몇 개인지 check. subnet은 연속되는 1이므로
+	// BinaryString에서 연속되는 1이 몇 개인지 check. subnet은 연속되는 1이므
 	public static int checkOne(String str) {
 		int count = 0;
 		for (int bit = 0; bit < str.length(); bit++) {

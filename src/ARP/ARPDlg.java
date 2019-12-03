@@ -6,8 +6,12 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -32,6 +36,7 @@ import ARP.RoutingTable._Routing_Entry;
 
 // ARP cache Table을 쓰레드 없이 갱신할 수 있나? (TTL때문)
 // 자료구조가 두 갈래 레이어에 적절하게 분배되고 있는지?
+// 언제, 왜 GUI창이 종료되는 건지 모르겠다.
 
 @SuppressWarnings("serial")
 public class ARPDlg extends JFrame implements BaseLayer {
@@ -90,7 +95,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 	
 	static RoutingTable rtClass = new RoutingTable();
 	
-	public static void main(String[] args) throws SocketException {
+	public static void main(String[] args) throws IOException {
 		m_LayerMgr.AddLayer(new NILayer("NI"));
 		m_LayerMgr.AddLayer(new EthernetLayer("ETHERNET"));
 		m_LayerMgr.AddLayer(new ARPLayer("ARP"));
@@ -117,24 +122,39 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		//print for debug
 		//GUI에서 두 개의 TCP로 갈라져 나오는 구조. GUI.getUnderLayer(0) = TCP, GUI.getUnderLayer(1) = TCP2
 		//원래는 ARP에서 Ethernet으로 일방향 연결이어야 한다. 하지만 여기서는 ARP와 Ethernet이 양방향으로 연결되게끔 구현했다.
-		System.out.println("---------------------------------");
-		System.out.println(m_LayerMgr.GetLayer("ETHERNET").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("ARP").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("IP").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("TCP").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("GUI").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("TCP").GetUpperLayer(0).GetLayerName());
+		/*
+		 * System.out.println("---------------------------------");
+		 * System.out.println(m_LayerMgr.GetLayer("ETHERNET").GetUnderLayer(0).
+		 * GetLayerName());
+		 * System.out.println(m_LayerMgr.GetLayer("ARP").GetUnderLayer(0).GetLayerName()
+		 * );
+		 * System.out.println(m_LayerMgr.GetLayer("IP").GetUnderLayer(0).GetLayerName())
+		 * ;
+		 * System.out.println(m_LayerMgr.GetLayer("TCP").GetUnderLayer(0).GetLayerName()
+		 * );
+		 * System.out.println(m_LayerMgr.GetLayer("GUI").GetUnderLayer(0).GetLayerName()
+		 * );
+		 * System.out.println(m_LayerMgr.GetLayer("TCP").GetUpperLayer(0).GetLayerName()
+		 * );
+		 * 
+		 * System.out.println("\n" +
+		 * m_LayerMgr.GetLayer("ETHERNET2").GetUnderLayer(0).GetLayerName());
+		 * System.out.println(m_LayerMgr.GetLayer("ARP2").GetUnderLayer(0).GetLayerName(
+		 * ));
+		 * System.out.println(m_LayerMgr.GetLayer("IP2").GetUnderLayer(0).GetLayerName()
+		 * );
+		 * System.out.println(m_LayerMgr.GetLayer("TCP2").GetUnderLayer(0).GetLayerName(
+		 * ));
+		 * System.out.println(m_LayerMgr.GetLayer("GUI").GetUnderLayer(1).GetLayerName()
+		 * );
+		 * System.out.println(m_LayerMgr.GetLayer("TCP2").GetUpperLayer(0).GetLayerName(
+		 * )); System.out.println("---------------------------------");
+		 */
+		List<byte[]> list = new ArrayList<>();	//getMyisUpAdapterList()에서 isUp중인 네트워크 인터페이스 카드의 MAC주소 리스트를 담기 위한것
+		list = getMyisUpAdapterList(list);		// 자료구조 list에 isUp중인 NIC의 MAC주소를 담는다
 		
-		System.out.println("\n" + m_LayerMgr.GetLayer("ETHERNET2").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("ARP2").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("IP2").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("TCP2").GetUnderLayer(0).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("GUI").GetUnderLayer(1).GetLayerName());
-		System.out.println(m_LayerMgr.GetLayer("TCP2").GetUpperLayer(0).GetLayerName());
-		System.out.println("---------------------------------");
-		
-		((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(0);//PC마다 다르다. 0번이 아닐 수도 있기 때문에, 탐색하는 함수를 만들면 편할듯
-	//	((NILayer) m_LayerMgr.GetLayer("NI2")).SetAdapterNumber(1);
+		((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(list,0); 	// NIC의 MAC 주소 list에서 0번째에 있는 것으로 set하겠다
+		((NILayer) m_LayerMgr.GetLayer("NI2")).SetAdapterNumber(list,1);
 		
 		// 2초 마다 printCash()를 호출하여 캐시 테이블과 GUI를 갱신하는 쓰레드
 		Runnable task = () -> {
@@ -409,7 +429,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		TextWrite5.setHorizontalAlignment(SwingConstants.CENTER);
 		TextWrite5.setColumns(10);
 		routingPopupFrame.add(TextWrite5);
-		TextWrite5.setText("192.168.3.0"); // 디버깅
+		TextWrite5.setText("192.168.10.0"); // 디버깅
 
 		// "Netmask" 라벨과 텍스트 입력 창
 		JLabel lblNetMask = new JLabel("Netmask");
@@ -433,7 +453,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		TextWrite7.setHorizontalAlignment(SwingConstants.CENTER);
 		TextWrite7.setColumns(10);
 		routingPopupFrame.add(TextWrite7);
-		TextWrite7.setText("192.168.2.1"); // 디버깅
+		TextWrite7.setText("192.168.20.0"); // 디버깅
 
 		// "Flag" 라벨과 체크박스
 		JLabel lblFlag = new JLabel("Flag");
@@ -457,7 +477,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		lblInterface.setBounds(30, 130, 150, 25);
 		routingPopupFrame.add(lblInterface);
 
-		String[] str = { "0", "1", "2" };
+		String[] str = { "1", "2" };
 
 		cBoxInterface = new JComboBox<>(str);
 		cBoxInterface.setBounds(110, 130, 100, 25);
@@ -560,6 +580,31 @@ public class ARPDlg extends JFrame implements BaseLayer {
 					proxyPopupFrame.dispose();
 			 }
 		}
+	}
+	
+	static public List<byte[]> getMyisUpAdapterList(List<byte[]> list) throws SocketException {
+		Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
+
+		// isUP 중에 MAC과 IP 주소를 출력
+		System.out.println("----------- getMyisUpAdapterList() --------------");
+		while (interfaces.hasMoreElements()) {
+			NetworkInterface networkInterface = interfaces.nextElement();
+			if (networkInterface.isUp()) {									// isUp중인 NIC
+				if (networkInterface.getHardwareAddress() != null) {		// loop back Interface가 null이므로, 걸러준다.
+					list.add(networkInterface.getHardwareAddress());		// list에 MAC 주소 추가
+					
+					System.out.printf("%s -> %s \n ", networkInterface.getName(), networkInterface.getDisplayName());
+					System.out.printf("%d %d %d %d %d %d\n", networkInterface.getHardwareAddress()[0],
+							networkInterface.getHardwareAddress()[1], networkInterface.getHardwareAddress()[2],
+							networkInterface.getHardwareAddress()[3], networkInterface.getHardwareAddress()[4],
+							networkInterface.getHardwareAddress()[5]);
+
+					System.out.println(networkInterface.getInetAddresses().nextElement());
+					System.out.println();
+				}
+			}
+		}
+		return list;
 	}
 	
 	// 1.아래 함수는 GUI에서 entry를 선택하고 Delete버튼을 눌렀을 시 작동한다. 선택한 entry를 자료구조와 GUI에서 삭제하는 기능의 함수다.
