@@ -262,19 +262,21 @@ public class IPLayer implements BaseLayer {
 						&& routing_Table.get(key).isFlag_Gateway() == true) {
 					System.out.println("flag =UG");
 					
-					//String st_rt_gateway = routing_Table.get(key).getGateway();
-					//byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
+					String st_rt_gateway = routing_Table.get(key).getGateway();
+					byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
 
 					//data[16] = rt_gateway[0];
 					//data[17] = rt_gateway[1];
 					//data[18] = rt_gateway[2];
 					//data[19] = rt_gateway[3];
 					
+					
 					// * Gateway address를 IPLayer1 or 2의 하위레이어로 보내야함
 					if (interfaceNumber == routing_Table.get(key).getRoute_Interface()) {
-						if (routing_Table.get(key).getRoute_Interface() == 1)
-							// * Gateway address를 IPLayer1 하위레이어로 보내야함
+						if (routing_Table.get(key).getRoute_Interface() == 1) {
 							this.GetUnderLayer(0).Send(data, data.length);
+							((ARPLayer) this.GetUnderLayer(0)).getGateWayAddrFromIPLayer(rt_gateway);
+						}
 						else if(interfaceNumber != routing_Table.get(key).getRoute_Interface())
 							this.otherIPLayer.GetUnderLayer(0).Send(data, data.length);
 						else 

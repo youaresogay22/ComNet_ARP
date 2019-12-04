@@ -664,6 +664,10 @@ public class ARPLayer implements BaseLayer {
 			this.m_aHeader.arp_destHdAddr.addr[i] = dstMAC[i];
 		}
 	}
+	
+	public void getGateWayAddrFromIPLayer(byte[] gateway) {
+		setDstIPAddr(gateway);
+	}
 
 	// DstIpAddr getter & setter
 	public _IP_ADDR getDstIpAddr() {
@@ -686,15 +690,7 @@ public class ARPLayer implements BaseLayer {
 		temp.deleteCharAt(temp.length() - 1);
 		return temp.toString();
 	}
-	// old
-	// @Override
-	// public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
-	// if (pUnderLayer == null)
-	// return;
-	// this.p_UnderLayer = pUnderLayer;
-	// }
 
-	// new
 	@Override
 	public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
 		if (pUnderLayer == null)
@@ -715,15 +711,6 @@ public class ARPLayer implements BaseLayer {
 		return pLayerName;
 	}
 
-	// old
-	// @Override
-	// public BaseLayer GetUnderLayer() { // 하위 레이어 반환
-	// if (p_UnderLayer == null)
-	// return null;
-	// return p_UnderLayer;
-	// }
-
-	// new
 	@Override
 	public BaseLayer GetUnderLayer(int nindex) { // 상위 레이어 반환
 		if (nindex < 0 || nindex > nUnderLayerCount || nUnderLayerCount < 0)
