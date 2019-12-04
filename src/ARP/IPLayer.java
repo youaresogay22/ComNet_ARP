@@ -198,6 +198,8 @@ public class IPLayer implements BaseLayer {
 		int subnet_check = 0; // Routing Table 목적 주소 중 연산한 주소가 있는지 없는지 체크, 없으면 0 있으면 1
 
 		for (String key : routing_Table_Itr) { // Routing Table 검색을 위한 for문, Routing 테이블 한줄한줄 읽기
+			
+			System.out.println("IP RECEIVE START");
 
 			// Routing Table의 Destination Address
 			String st_rt_dstAddr = key;
@@ -223,11 +225,12 @@ public class IPLayer implements BaseLayer {
 					byte[] rt_subnetMask = routing_Table.get(key).getSubnetMask();
 
 					// 연산 결과 네트워크 주소와 일치하는 주소가 없으면 Routing Table을 읽는 for문에서 break
+					//패킷의 dstAddr을 rt_subnetMask와 AND연산한 뒤 rt_dstAddr와 일치하는것을 찾는다.
 					if (rt_dstAddr[j] != (dstAddr[j] & rt_subnetMask[j])) {
 						subnet_check = 0;
 						break; // 일치하는 네트워크 주소가 없으면 default entry
 					} else {
-						subnet_check = 1;
+						subnet_check = 1;	// 일치하는 것을 찾음
 					}
 				}
 			}
@@ -268,17 +271,14 @@ public class IPLayer implements BaseLayer {
 					//data[19] = rt_gateway[3];
 					
 					// * Gateway address를 IPLayer1 or 2의 하위레이어로 보내야함
-					if (interfaceNumber == routing_Table.get(key).getRoute_Interface())
-
-					if (routing_Table.get(key).getRoute_Interface() == 1) {
-						// * Gateway address를 IPLayer1 하위레이어로 보내야함
-						this.GetUnderLayer(0).Send(data, data.length);
-					}
-					else if(interfaceNumber != routing_Table.get(key).getRoute_Interface()) {
-						this.otherIPLayer.GetUnderLayer(0).Send(data, data.length);
-					}
-					else {
-						break;
+					if (interfaceNumber == routing_Table.get(key).getRoute_Interface()) {
+						if (routing_Table.get(key).getRoute_Interface() == 1)
+							// * Gateway address를 IPLayer1 하위레이어로 보내야함
+							this.GetUnderLayer(0).Send(data, data.length);
+						else if(interfaceNumber != routing_Table.get(key).getRoute_Interface())
+							this.otherIPLayer.GetUnderLayer(0).Send(data, data.length);
+						else 
+							break;
 					}
 				} else {// U, UG 둘 다 아닐 경우 break
 					break;
@@ -297,7 +297,7 @@ public class IPLayer implements BaseLayer {
 
 				if (interfaceNumber == routing_Table.get(key).getRoute_Interface())
 					this.GetUnderLayer(0).Send(data, data.length);
-				else if(interfaceNumber != routing_Table.get(key).getRoute_Interface()) 
+				else if (interfaceNumber != routing_Table.get(key).getRoute_Interface())
 					this.otherIPLayer.GetUnderLayer(0).Send(data, data.length);
 				else
 					break;
