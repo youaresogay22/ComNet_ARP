@@ -586,7 +586,7 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces(); // 현재 PC의 모든 NIC를 열거형으로 받는다.
 
 		// isUP 중에 MAC과 IP 주소를 출력
-		System.out.println("----------- getMyisUpAdapterList() --------------");
+		System.out.println("----------- GUI : getMyisUpAdapterList() --------------");
 		while (interfaces.hasMoreElements()) {
 			NetworkInterface networkInterface = interfaces.nextElement();
 			if (networkInterface.isUp()) {									// isUp중인 NIC

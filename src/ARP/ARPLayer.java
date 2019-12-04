@@ -226,7 +226,7 @@ public class ARPLayer implements BaseLayer {
 		 */
 		//상세한 내용은 깃허브 마일스톤을 확인하세요.
 		
-		// 12/03 수정: Send Reply Message: input이 ARP request(opcode=2)인 경우 ARP reply를 보냄
+		// 12/03 수정: Send Reply Message: input이 ARP request(opcode=1)인 경우 ARP reply를 보냄
 		if (isARPRequest(input)) {  
 			for (int i = 0; i < 6; i++)
 				input[i + 18] = MY_MAC_ADDRESS.addr[i]; // 패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신

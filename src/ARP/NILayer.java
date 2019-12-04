@@ -46,41 +46,40 @@ public class NILayer implements BaseLayer {
 		return m_pAdapterList.get(iIndex);
 	}
 
-	public void SetAdapterNumber(List<byte[]> bytesMAC,int iNum) throws IOException {
+	public void SetAdapterNumber(List<byte[]> bytesMAC,int selectedNum) throws IOException {
 		int deviceLen = 0;
 		int cnt =0;
-
-		System.out.println(
-				"\n----------------------------NILayer : SetAdapterNumber() ------------------------------------");
+		
+		System.out.println("\n----------------------------" + pLayerName + " : SetAdapterNumber(" +selectedNum+ ") ------------------------------------");
 		for (PcapIf device : m_pAdapterList) { // m_pAdapterList 수 만큼 반복 -> deviceLen
+			for (int z = 0; z < 6; z++) {
+				// argu 1: device의 hardwareAddr이 null인데 device.getHardwareAddr()을 호출하면 error가 뜬다. 이를 방지하는 조건식
+				// argu 2: bytesMAC에 하나밖에 안 들어있는데 SelecteNum으로 2가 들어온 경우, bytesMAC.get(2)를 실행하게 되어 outOfIndex error가 뜬다. 이를 방지하는 조건식.
+				if (device.getHardwareAddress() != null && bytesMAC.size() >= (selectedNum+1)) {
+					if (bytesMAC.get(selectedNum)[z] == device.getHardwareAddress()[z]) {
+						cnt++;
+						if (cnt == 6) {	//byte[]가 모두 일치함
+							System.out.println("\n["+ deviceLen +"번]과 일치!");
+							System.out.println(m_pAdapterList.get(deviceLen).getDescription());
+							System.out.println(m_pAdapterList.get(deviceLen).getAddresses().get(0));
+							System.out.printf(" %d %d %d %d %d %d\n", device.getHardwareAddress()[0],
+									device.getHardwareAddress()[1], device.getHardwareAddress()[2],
+									device.getHardwareAddress()[3], device.getHardwareAddress()[4],
+									device.getHardwareAddress()[5]);
+							System.out.println("");
 
-			for (byte[] mac : bytesMAC) { // bytesMAC 수 만큼 반복 if(deviceLen == iNum)
-				{ // setAdapterNumber(iNum)과 isUp
-					// m_pAdapterList(deviceLen)이 같을 때 (인덱스)
-					for (int j = 0; j < 6; j++) {
-						if (!device.getAddresses().isEmpty()) {
-							if (mac[j] == device.getHardwareAddress()[j])
-								cnt++;
-							if (cnt == 6) { // cnt가 6이면, byte[6] 형태의 mac 주소가 일치하는 것
-								System.out.println("\n일치! cnt = " + cnt + " , index = " + deviceLen);
-								System.out.println(m_pAdapterList.get(deviceLen).getDescription());
-								System.out.println(m_pAdapterList.get(deviceLen).getAddresses().get(0));
-								System.out.println();
-
-								m_iNumAdapter = deviceLen;
-							}
-
+							m_iNumAdapter = deviceLen;
 						}
-					}
+					} else 		// 바이트간 비교시 != 이면,
+						break;  // 반복문을 계속하지 않고 탈출
 				}
-				cnt = 0;
 			}
+			cnt = 0;
 
 			// print for debug
 			String description = (device.getDescription() != null) ? device.getDescription() : "장비에 대한 설명이 없습니다.";
-			System.out.printf("[%d번]: %s [%s] \n", deviceLen, device.getName(), description);
-			if (!device.getAddresses().isEmpty()) {
-				System.out.println(device.getAddresses().get(0));
+			System.out.printf("[%d번]: %s %s \n", deviceLen, description,device.getAddresses());
+			if (device.getHardwareAddress() != null) {
 				try {
 					System.out.printf(" %d %d %d %d %d %d\n", device.getHardwareAddress()[0],
 							device.getHardwareAddress()[1], device.getHardwareAddress()[2],
