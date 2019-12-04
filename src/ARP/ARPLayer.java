@@ -226,35 +226,73 @@ public class ARPLayer implements BaseLayer {
 		 * 3-2. 캐시 테이블에 해당하는 IP주소가 없으면 해당 IP주소에 ARP request message를 보낸다.
 		 * 4-2. ARP reply가 도착하면 캐시 테이블이 업데이트된다. 이제 2로 돌아간다.
 		 */
-		//상세한 내용은 깃허브 마일스톤을 확인하세요.
-		
+		// 상세한 내용은 깃허브 마일스톤을 확인하세요.
+
 		// 12/03 수정: Send Reply Message: input이 ARP request(opcode=1)인 경우 ARP reply를 보냄
-		if (isARPRequest(input)) {  
+		if (isARPRequest(input)) {
 			for (int i = 0; i < 6; i++)
 				input[i + 18] = MY_MAC_ADDRESS.addr[i]; // 패킷의 ???(target MAC)를 내 PC의 MAC 주소로 갱신
 			input = swappingAddr(input); // src 주소 <-> target 주소 swapping
 			input[6] = (byte) 0x00; // setOpCode(2)
 			input[7] = (byte) 0x02;
 			this.GetUnderLayer(0).Send(input, input.length); // Send Reply Message
-			
-		// 12/03 수정: ARP request가 아닌 모든 경우 ARP request를 보낸다.
+
+			// 12/03 수정: ARP request가 아닌 모든 경우 ARP request를 보낸다.
 		} else {
-			setARPHeaderBeforeSend(); // opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
-			setSrcMAC(MY_MAC_ADDRESS.addr);
-			setSrcIPAddr(MY_IP_ADDRESS.addr);
-			// setDst는 GUI에서 이루어지고 있다.
-			byte[] ARP_header_added_bytes = ObjToByte(m_aHeader, input, length);
+			_IP_ADDR dstaddr_IPclass =m_aHeader.arp_destProtoAddr;
+			String target_IP = dstaddr_IPclass.toString();
 
-			String target_IP = getDstAddrFromHeader(ARP_header_added_bytes);
-			_Cache_Entry cache_Entry = // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
-					new _Cache_Entry(new byte[6], "Incomplete", 80);
+			if (checkTable(input)) {
+				setARPHeaderBeforeSend(); // opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
+				setSrcMAC(MY_MAC_ADDRESS.addr);
+				setSrcIPAddr(MY_IP_ADDRESS.addr);
 
-			if (!cache_Table.containsKey(target_IP))
-				cache_Table.put(target_IP, cache_Entry);
+				setDstMAC(cache_Table.get(target_IP).cache_ethaddr);
+				this.GetUnderLayer(0).Send(input, input.length); // Send Request Message
+			} else {
+				setARPHeaderBeforeSend(); // opCode를 포함한 hdtype,prototype,hdLen,protoLen 초기화. opCode의 default는 1이다.
+				setSrcMAC(MY_MAC_ADDRESS.addr);
+				setSrcIPAddr(MY_IP_ADDRESS.addr);
 
-			this.GetUnderLayer(0).Send(ARP_header_added_bytes, ARP_header_added_bytes.length); // Send Request Message
+				// setDst는 GUI에서 이루어지고 있다.
+				// 12/4 수정: GUI에서 dstaddr 지정하는 부분 지워졌으므로 수동으로 설정
+
+				byte[] ARP_only_nullbytes = ObjToByte(m_aHeader, "".getBytes(), 1);
+
+				_Cache_Entry cache_Entry = // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
+						new _Cache_Entry(new byte[6], "Incomplete", 100);
+
+				if (!cache_Table.containsKey(target_IP))
+					cache_Table.put(target_IP, cache_Entry);
+
+				this.GetUnderLayer(0).Send(ARP_only_nullbytes, ARP_only_nullbytes.length); // Send Request Message
+				Send(input, length);
+			}
+
 		}
 		return false;
+	}
+
+	// 12/4 추가:proxyRPsend 재활용
+	public boolean checkTable(byte[] input) {
+		// 헤더에서 target ip, target mac 가져오기
+		_IP_ADDR targetIP = new _IP_ADDR();
+
+		for (int i = 0; i < 4; i++) {
+			targetIP.addr[i] = input[i + 16];
+		}
+		String targetIPAddr = targetIP.toString();
+
+		_ETHERNET_ADDR targetMAC = new _ETHERNET_ADDR();
+		for (int i = 0; i < 6; i++) {
+			targetMAC.addr[i] = input[i + 18];
+		}
+
+		// 내 cache_Table에 있다면 내 cache_table에 sender hd address 업데이트
+		if (cache_Table.containsKey(targetIPAddr) == true && cache_Table.get(targetIPAddr).cache_status == "Complete") {
+			return true;
+		} else
+			return false;
 	}
 
 	public boolean cameFromDlg(byte[] input) {
