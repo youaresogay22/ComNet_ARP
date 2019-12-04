@@ -110,16 +110,18 @@ public class ARPLayer implements BaseLayer {
 		// 캐시테이블 자동 제거 스레드
 
 		// 디버깅
-		String target_IP = "111.111.111.111";
-		_Cache_Entry cache_Entry = // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
-				new _Cache_Entry(new byte[6], "Incomplete", 80);
-
-		cache_Table.put(target_IP, cache_Entry);
-
-		target_IP = "222.222.222.222";
-		cache_Entry = new _Cache_Entry(new byte[6], "Incomplete", 10);
-
-		cache_Table.put(target_IP, cache_Entry);
+		/*
+		 * String target_IP = "111.111.111.111"; _Cache_Entry cache_Entry = // dst_Addr를
+		 * KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성 new _Cache_Entry(new byte[6],
+		 * "Incomplete", 80);
+		 * 
+		 * cache_Table.put(target_IP, cache_Entry);
+		 * 
+		 * target_IP = "222.222.222.222"; cache_Entry = new _Cache_Entry(new byte[6],
+		 * "Incomplete", 10);
+		 * 
+		 * cache_Table.put(target_IP, cache_Entry);
+		 */
 	}
 
 	public void ResetHeader() {
@@ -218,8 +220,8 @@ public class ARPLayer implements BaseLayer {
 		/*
 		 * 해야 하는 것: ARP 레이어로 내려온 IP 패킷을 전송하기 
 		 * 전송하기 위해 해야 할 일: 
-		 * 1.IP 패킷(이 경우 parameter인byte[] input)을 send 내부에서 가지고 있는다. 
-		 * 2.캐시 테이블의 이터레이터가 input의 16-19번째 바이트와 일치하는지 탐색한다.
+		 * 1.IP 패킷(이 경우 parameter인byte[] input)을 send 내부에서 가지고 있는다. 				쓰레드를 만들어야 하나?
+		 * 2.캐시 테이블의 이터레이터가 input의 16-19번째 바이트와 일치하는지 탐색한다.					ARP 메시지를 보내기도 전인데 캐시테이블에 엔트리가 존재하는가?
 		 * 3-1. 캐시 테이블에 해당하는 IP주소가 있으면 해당 MAC 주소로 IP패킷을 보낸다. 끝.
 		 * 3-2. 캐시 테이블에 해당하는 IP주소가 없으면 해당 IP주소에 ARP request message를 보낸다.
 		 * 4-2. ARP reply가 도착하면 캐시 테이블이 업데이트된다. 이제 2로 돌아간다.

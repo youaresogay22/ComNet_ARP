@@ -16,7 +16,8 @@ public class IPLayer implements BaseLayer {
 	public String pLayerName = null;
 	public BaseLayer p_UnderLayer = null;
 	public ArrayList<BaseLayer> p_aUpperLayer = new ArrayList<BaseLayer>();
-
+	int interfaceNumber;
+	
 	IPLayer otherIPLayer;
 
 	public Map<String, _Routing_Entry> routing_Table;
@@ -234,21 +235,25 @@ public class IPLayer implements BaseLayer {
 			// 하위 레이어로 보내기
 
 			if (subnet_check == 1) {
-
+				// ???????????????????????????????????????????????? 테이블 자료구조의 인터페이스가 1일때 왜  this.getUnderLayer(0).send를 하는지.
+				// 													자료구조의 인터페이스가 1이여서 패킷 또한 인터페이스 1로 보내야 하는데, this.getUnderLayer가 인터페이스 1인지 어떻게 장담하는지.
+				//													여기서 this가 IP(interface1), IP2(interface2) Layer 둘 중 어느것인지 체크해야하지 않나?
+				
+				
 				// Flag U인 경우, FlagUp=true, FlagGateway=false
 				if (routing_Table.get(key).isFlag_Up() == true && routing_Table.get(key).isFlag_Gateway() == false) {
 					System.out.println("flag =U");
-					if (routing_Table.get(key).getRoute_Interface() == 1) {
+					//					해결 ->	dlg에서 IP에는 interfaceNumber의 값으로 1을, IP2에는 2로 set했다. interfaceNumber로 구분.
+					if(interfaceNumber == routing_Table.get(key).getRoute_Interface()) { 
 						System.out.println("GetUnderLayer(0)");
 						this.GetUnderLayer(0).Send(data, data.length);
-					} else if (routing_Table.get(key).getRoute_Interface() == 2) {
-						System.out.println("GetotherIPLayer");
-						this.otherIPLayer.Send(data, data.length);
-
-					} else { // Interface가 1,2 둘 다 아닌 경우 break
-						break;
 					}
-
+					else if(interfaceNumber != routing_Table.get(key).getRoute_Interface()){
+						System.out.println("GetOtherIPLayer");
+						this.otherIPLayer.GetUnderLayer(0).Send(data, data.length);
+					}
+					else
+						break;
 					// Flag UG인 경우, FlagUp=true, FlagGateway=true
 				} else if (routing_Table.get(key).isFlag_Up() == true
 						&& routing_Table.get(key).isFlag_Gateway() == true) {
@@ -260,26 +265,21 @@ public class IPLayer implements BaseLayer {
 					data[17] = rt_gateway[1];
 					data[18] = rt_gateway[2];
 					data[19] = rt_gateway[3];
-
-					if (routing_Table.get(key).getRoute_Interface() == 1) {
-						// * Gateway address를 IPLayer1 하위레이어로 보내야함
+					
+					// * Gateway address를 IPLayer1 or 2의 하위레이어로 보내야함
+					if (interfaceNumber == routing_Table.get(key).getRoute_Interface())
 						this.GetUnderLayer(0).Send(data, data.length);
-					} else if (routing_Table.get(key).getRoute_Interface() == 2) {
-						// * Gateway address를 IPLayer2 하위레이어로 보내야함
-						this.otherIPLayer.Send(data, data.length);
-					} else { // Interface가 1,2 둘 다 아닌 경우 break
+					else if(interfaceNumber != routing_Table.get(key).getRoute_Interface()) 
+						this.otherIPLayer.GetUnderLayer(0).Send(data, data.length);
+					else
 						break;
-					}
-
-					// U, UG 둘 다 아닐 경우 break
-				} else {
+				} else {// U, UG 둘 다 아닐 경우 break
 					break;
 				}
-
 			} else { // subnet_check == 0, Default entry로 보냄
 				System.out.println("subnet_check == 0");
 				// * 라우팅 테이블의 Gateway address를 내려보내야함
-				String st_rt_gateway = routing_Table.get("0.0.0.0").getGateway();
+				String st_rt_gateway = routing_Table.get("0.0.0.0").getGateway();		// 여기서 가끔 문제 발생. "0.0.0.0"이 없는데 get하기 때문??
 				byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
 
 				data[16] = rt_gateway[0];
@@ -287,13 +287,12 @@ public class IPLayer implements BaseLayer {
 				data[18] = rt_gateway[2];
 				data[19] = rt_gateway[3];
 
-				if (routing_Table.get(key).getRoute_Interface() == 1) {
+				if (interfaceNumber == routing_Table.get(key).getRoute_Interface())
 					this.GetUnderLayer(0).Send(data, data.length);
-				} else if (routing_Table.get(key).getRoute_Interface() == 2) {
-					this.otherIPLayer.Send(data, data.length);
-				} else { // Interface가 1,2 둘 다 아닌 경우 break
+				else if(interfaceNumber != routing_Table.get(key).getRoute_Interface()) 
+					this.otherIPLayer.GetUnderLayer(0).Send(data, data.length);
+				else
 					break;
-				}
 			}
 			return true;
 		}
@@ -321,16 +320,12 @@ public class IPLayer implements BaseLayer {
 
 		return bytes;
 	}
+	
+	//dlg에서 set한다
+	void setInterfaceNumber(int number) {
+		interfaceNumber = number;
+	}
 
-	// old
-	// @Override
-	// public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
-	// if (pUnderLayer == null)
-	// return;
-	// this.p_UnderLayer = pUnderLayer;
-	// }
-
-	// new
 	@Override
 	public void SetUnderLayer(BaseLayer pUnderLayer) { // 하위 레이어 설정
 		if (pUnderLayer == null)
@@ -351,15 +346,6 @@ public class IPLayer implements BaseLayer {
 		return pLayerName;
 	}
 
-	// old
-	// @Override
-	// public BaseLayer GetUnderLayer() { // 하위 레이어 반환
-	// if (p_UnderLayer == null)
-	// return null;
-	// return p_UnderLayer;
-	// }
-
-	// new
 	@Override
 	public BaseLayer GetUnderLayer(int nindex) { // 상위 레이어 반환
 		if (nindex < 0 || nindex > nUnderLayerCount || nUnderLayerCount < 0)

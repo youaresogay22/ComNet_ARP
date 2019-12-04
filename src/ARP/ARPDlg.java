@@ -35,8 +35,8 @@ import ARP.ARPLayer._Proxy_Entry;
 import ARP.RoutingTable._Routing_Entry;
 
 // ARP cache Table을 쓰레드 없이 갱신할 수 있나? (TTL때문)
-// 자료구조가 두 갈래 레이어에 적절하게 분배되고 있는지?
 // 언제, 왜 GUI창이 종료되는 건지 모르겠다.
+// GUI에서 Connected Gateway를 *로 작성해도 되게끔 구현?
 
 @SuppressWarnings("serial")
 public class ARPDlg extends JFrame implements BaseLayer {
@@ -155,6 +155,9 @@ public class ARPDlg extends JFrame implements BaseLayer {
 		
 		((NILayer) m_LayerMgr.GetLayer("NI")).SetAdapterNumber(list,0); 	// NIC의 MAC 주소 list에서 0번째에 있는 것으로 set하겠다
 		((NILayer) m_LayerMgr.GetLayer("NI2")).SetAdapterNumber(list,1);
+		((IPLayer)m_LayerMgr.GetLayer("IP")).setInterfaceNumber(1);
+		((IPLayer)m_LayerMgr.GetLayer("IP2")).setInterfaceNumber(2);
+		
 		
 		// 2초 마다 printCash()를 호출하여 캐시 테이블과 GUI를 갱신하는 쓰레드
 		Runnable task = () -> {
