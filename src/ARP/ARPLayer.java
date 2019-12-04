@@ -218,13 +218,11 @@ public class ARPLayer implements BaseLayer {
 	public boolean Send(byte[] input, int length) {
 
 		/*
-		 * 해야 하는 것: ARP 레이어로 내려온 IP 패킷을 전송하기 
-		 * 전송하기 위해 해야 할 일: 
-		 * 1.IP 패킷(이 경우 parameter인byte[] input)을 send 내부에서 가지고 있는다. 				
-		 * 2.캐시 테이블의 이터레이터가 input의 16-19번째 바이트와 일치하는지 탐색한다.					
-		 * 3-1. 캐시 테이블에 해당하는 IP주소가 있으면 해당 MAC 주소로 IP패킷을 보낸다. 끝.
-		 * 3-2. 캐시 테이블에 해당하는 IP주소가 없으면 해당 IP주소에 ARP request message를 보낸다.
-		 * 4-2. ARP reply가 도착하면 캐시 테이블이 업데이트된다. 이제 2로 돌아간다.
+		 * 해야 하는 것: ARP 레이어로 내려온 IP 패킷을 전송하기 전송하기 위해 해야 할 일: 1.IP 패킷(이 경우
+		 * parameter인byte[] input)을 send 내부에서 가지고 있는다. 2.캐시 테이블의 이터레이터가 input의 16-19번째
+		 * 바이트와 일치하는지 탐색한다. 3-1. 캐시 테이블에 해당하는 IP주소가 있으면 해당 MAC 주소로 IP패킷을 보낸다. 끝. 3-2. 캐시
+		 * 테이블에 해당하는 IP주소가 없으면 해당 IP주소에 ARP request message를 보낸다. 4-2. ARP reply가 도착하면
+		 * 캐시 테이블이 업데이트된다. 이제 2로 돌아간다.
 		 */
 		// 상세한 내용은 깃허브 마일스톤을 확인하세요.
 
@@ -239,7 +237,7 @@ public class ARPLayer implements BaseLayer {
 
 			// 12/03 수정: ARP request가 아닌 모든 경우 ARP request를 보낸다.
 		} else {
-			_IP_ADDR dstaddr_IPclass =m_aHeader.arp_destProtoAddr;
+			_IP_ADDR dstaddr_IPclass = m_aHeader.arp_destProtoAddr;
 			String target_IP = dstaddr_IPclass.toString();
 
 			if (checkTable(input)) {
@@ -257,7 +255,8 @@ public class ARPLayer implements BaseLayer {
 				// setDst는 GUI에서 이루어지고 있다.
 				// 12/4 수정: GUI에서 dstaddr 지정하는 부분 지워졌으므로 수동으로 설정
 
-				byte[] ARP_only_nullbytes = ObjToByte(m_aHeader, "".getBytes(), 1);
+				byte[] nullbytes = "".getBytes();
+				byte[] ARP_only_nullbytes = ObjToByte(m_aHeader, nullbytes, nullbytes.length);
 
 				_Cache_Entry cache_Entry = // dst_Addr를 KEY로 갖고 cache_Entry를 VALUE로 갖는 hashMap 생성
 						new _Cache_Entry(new byte[6], "Incomplete", 100);
@@ -266,6 +265,7 @@ public class ARPLayer implements BaseLayer {
 					cache_Table.put(target_IP, cache_Entry);
 
 				this.GetUnderLayer(0).Send(ARP_only_nullbytes, ARP_only_nullbytes.length); // Send Request Message
+				// 캐시테이블 업데이트 되고 나면
 				Send(input, length);
 			}
 
@@ -702,7 +702,7 @@ public class ARPLayer implements BaseLayer {
 			this.m_aHeader.arp_destHdAddr.addr[i] = dstMAC[i];
 		}
 	}
-	
+
 	public void getGateWayAddrFromIPLayer(byte[] gateway) {
 		setDstIPAddr(gateway);
 	}
