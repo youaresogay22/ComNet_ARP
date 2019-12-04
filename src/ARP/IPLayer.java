@@ -258,34 +258,42 @@ public class IPLayer implements BaseLayer {
 				} else if (routing_Table.get(key).isFlag_Up() == true
 						&& routing_Table.get(key).isFlag_Gateway() == true) {
 					System.out.println("flag =UG");
-					String st_rt_gateway = routing_Table.get(key).getGateway();
-					byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
+					
+					//String st_rt_gateway = routing_Table.get(key).getGateway();
+					//byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
 
-					data[16] = rt_gateway[0];
-					data[17] = rt_gateway[1];
-					data[18] = rt_gateway[2];
-					data[19] = rt_gateway[3];
+					//data[16] = rt_gateway[0];
+					//data[17] = rt_gateway[1];
+					//data[18] = rt_gateway[2];
+					//data[19] = rt_gateway[3];
 					
 					// * Gateway address를 IPLayer1 or 2의 하위레이어로 보내야함
 					if (interfaceNumber == routing_Table.get(key).getRoute_Interface())
+
+					if (routing_Table.get(key).getRoute_Interface() == 1) {
+						// * Gateway address를 IPLayer1 하위레이어로 보내야함
 						this.GetUnderLayer(0).Send(data, data.length);
-					else if(interfaceNumber != routing_Table.get(key).getRoute_Interface()) 
+					}
+					else if(interfaceNumber != routing_Table.get(key).getRoute_Interface()) {
 						this.otherIPLayer.GetUnderLayer(0).Send(data, data.length);
-					else
+					}
+					else {
 						break;
+					}
 				} else {// U, UG 둘 다 아닐 경우 break
 					break;
 				}
 			} else { // subnet_check == 0, Default entry로 보냄
 				System.out.println("subnet_check == 0");
 				// * 라우팅 테이블의 Gateway address를 내려보내야함
-				String st_rt_gateway = routing_Table.get("0.0.0.0").getGateway();		// 여기서 가끔 문제 발생. "0.0.0.0"이 없는데 get하기 때문??
-				byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
+				
+			//	String st_rt_gateway = routing_Table.get("0.0.0.0").getGateway();		// 여기서 가끔 문제 발생. "0.0.0.0"이 없는데 get하기 때문??
+			//	byte[] rt_gateway = strIPToByteArray(st_rt_gateway);
 
-				data[16] = rt_gateway[0];
-				data[17] = rt_gateway[1];
-				data[18] = rt_gateway[2];
-				data[19] = rt_gateway[3];
+			//	data[16] = rt_gateway[0];
+			//	data[17] = rt_gateway[1];
+			//	data[18] = rt_gateway[2];
+			//	data[19] = rt_gateway[3];
 
 				if (interfaceNumber == routing_Table.get(key).getRoute_Interface())
 					this.GetUnderLayer(0).Send(data, data.length);
